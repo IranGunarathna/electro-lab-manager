@@ -170,7 +170,7 @@ export default function Landing() {
       code: 'CIEL-LAB',
       location: 'Block F, Room 201',
       inCharge: 'Systems Engineer & TA Cohort',
-      image: '/assets/components/ic_chip.jpg',
+      image: '/assets/labs/information_engineering.png',
       icon: Cpu,
       color: '#4f46e5',
       items: [
