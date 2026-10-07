@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema(
       enum: ['Student', 'LabAssistant', 'Admin'],
       default: 'Student'
     },
+    regNo: {
+      type: String,
+      trim: true
+    },
+    semester: {
+      type: Number,
+      enum: [3, 4]
+    },
     supervisor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

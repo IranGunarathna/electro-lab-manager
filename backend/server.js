@@ -50,6 +50,7 @@ app.use('/api/equipment', equipmentRoutes);
 
 // Add these lines along with your other route imports
 const itemRoutes = require('./routes/itemRoutes');
-
-// Mount the route
 app.use('/api/items', itemRoutes);
+
+const labSessionRoutes = require('./routes/labSessionRoutes');
+app.use('/api/lab-sessions', labSessionRoutes);

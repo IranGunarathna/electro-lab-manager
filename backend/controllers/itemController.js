@@ -5,7 +5,7 @@ const Item = require('../models/Item');
 // @access  Public (or Protected)
 const getItems = async (req, res) => {
   try {
-    const { keyword, category, status } = req.query;
+    const { keyword, category, status, lab } = req.query;
     const query = {};
 
     if (keyword) {
@@ -16,6 +16,9 @@ const getItems = async (req, res) => {
     }
     if (status && status !== 'All') {
       query.status = status;
+    }
+    if (lab && lab !== 'All') {
+      query.lab = lab;
     }
 
     const items = await Item.find(query).sort({ createdAt: -1 });

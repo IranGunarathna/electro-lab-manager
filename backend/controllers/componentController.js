@@ -6,18 +6,23 @@ const Component = require('../models/Component');
 // @access  Public (or Protected)
 exports.getComponents = async (req, res) => {
   try {
-    const { search, type } = req.query;
+    const { search, type, lab } = req.query;
     let query = {};
 
     if (search) {
       query.$or = [
         { compId: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
         { spec: { $regex: search, $options: 'i' } }
       ];
     }
 
     if (type) {
       query.type = type;
+    }
+
+    if (lab) {
+      query.lab = lab;
     }
 
     const components = await Component.find(query);

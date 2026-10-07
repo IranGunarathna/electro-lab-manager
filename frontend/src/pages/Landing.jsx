@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import logoOscilloscope from '../assets/D · Oscilloscope@2x (1).png';
 import logoDeie from '../assets/Deie.png';
 import rigolDs9604 from '../assets/rigol-ds9604.jpg';
@@ -35,11 +36,32 @@ import './Landing.css';
 export default function Landing() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilterTag, setActiveFilterTag] = useState('All');
   const [selectedLabModal, setSelectedLabModal] = useState(null);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Live database components
+  const [dbComponents, setDbComponents] = useState([]);
+  const [loadingComps, setLoadingComps] = useState(false);
+
+  useEffect(() => {
+    fetchComponents();
+  }, []);
+
+  const fetchComponents = async () => {
+    try {
+      setLoadingComps(true);
+      const res = await axios.get('http://localhost:5000/api/components');
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setDbComponents(res.data);
+      }
+    } catch (err) {
+      console.log('Using default lab equipment list:', err.message);
+    } finally {
+      setLoadingComps(false);
+    }
+  };
 
   useEffect(() => {
     let ticking = false;
@@ -223,44 +245,66 @@ export default function Landing() {
     }
   ];
 
-  // Quick search keywords
-  const quickTags = [
-    'All',
-    'Oscilloscopes',
-    'High Voltage',
-    'Renewable Energy',
-    'High Performance Computing',
-    'FPGA Dev Benches',
-    'Cisco Networking',
-    'Robotics & 3D Print'
-  ];
+  // Connect with live database components for each laboratory
+  const dynamicLaboratories = useMemo(() => {
+    return laboratories.map((lab) => {
+      // Match database components to this laboratory
+      const matching = dbComponents.filter((c) => {
+        if (!c.lab) return false;
+        const compLab = c.lab.trim().toLowerCase();
+        const curLab = lab.name.trim().toLowerCase();
+        return compLab === curLab || compLab.includes(curLab) || curLab.includes(compLab);
+      });
 
-  // Search filtering logic across all 8 labs and their equipment
+      if (matching.length === 0) {
+        return lab;
+      }
+
+      // First 4 featured items directly from MongoDB database
+      const dynamicItems = matching.slice(0, 4).map((c) => c.name);
+
+      const totalQty = matching.reduce(
+        (sum, c) => sum + (c.totalQuantity ?? c.stockQty ?? 1),
+        0
+      );
+      const availQty = matching.reduce(
+        (sum, c) => sum + (c.availableQuantity ?? c.stockQty ?? 0),
+        0
+      );
+
+      return {
+        ...lab,
+        items: dynamicItems,
+        dbComponents: matching,
+        totalItemsCount: matching.length,
+        openStations: availQty,
+        totalStations: totalQty,
+        status: availQty > 0 ? 'Open Now' : 'Stock Depleted'
+      };
+    });
+  }, [laboratories, dbComponents]);
+
+  // Search filtering logic across all 8 labs and their live equipment
   const filteredLabs = useMemo(() => {
-    return laboratories.filter((lab) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
+    if (!searchQuery.trim()) return dynamicLaboratories;
+    const q = searchQuery.toLowerCase().trim();
+    return dynamicLaboratories.filter((lab) => {
+      return (
         lab.name.toLowerCase().includes(q) ||
         lab.code.toLowerCase().includes(q) ||
         lab.location.toLowerCase().includes(q) ||
-        lab.items.some((it) => it.toLowerCase().includes(q));
-
-      if (activeFilterTag === 'All') return matchesSearch;
-
-      const tagMap = {
-        'Oscilloscopes': lab.id === 3,
-        'High Voltage': lab.id === 2 || lab.id === 1,
-        'Renewable Energy': lab.id === 2,
-        'SMT Workshop': lab.id === 4,
-        'FPGA Dev Benches': lab.id === 6,
-        'Cisco Networking': lab.id === 7,
-        'Robotics & 3D Print': lab.id === 8
-      };
-
-      const matchesTag = tagMap[activeFilterTag] ?? true;
-      return matchesSearch && matchesTag;
+        lab.items.some((it) => it.toLowerCase().includes(q)) ||
+        (lab.dbComponents &&
+          lab.dbComponents.some(
+            (c) =>
+              (c.name || '').toLowerCase().includes(q) ||
+              (c.spec || '').toLowerCase().includes(q) ||
+              (c.category || '').toLowerCase().includes(q) ||
+              (c.location || '').toLowerCase().includes(q)
+          ))
+      );
     });
-  }, [searchQuery, activeFilterTag]);
+  }, [dynamicLaboratories, searchQuery]);
 
   const scrollToMatrix = () => {
     const el = document.getElementById('labs-matrix');
@@ -269,7 +313,7 @@ export default function Landing() {
 
 
   return (
-    <div className= "landing-page">
+    <div className="landing-page">
       {/* ====================================================================
           1. GLOBAL NAVIGATION BAR
           ==================================================================== */}
@@ -423,22 +467,7 @@ export default function Landing() {
                 </button>
               </div>
 
-              {/* Quick Search Tag Chips */}
-              <div className="hero-quick-tags-panel">
-                <span className="quick-tag-label">Quick Filters:</span>
-                {quickTags.map((tag) => (
-                  <button
-                    key={tag}
-                    className={`quick-tag-btn ${activeFilterTag === tag ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveFilterTag(tag);
-                      scrollToMatrix();
-                    }}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
+
             </div>
 
             {/* Rigol DS9604 Showcase Card */}
@@ -587,24 +616,96 @@ export default function Landing() {
               </div>
 
               <div style={{ marginBottom: '22px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '10px' }}>Specialized Modules &amp; Equipment</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {(selectedLabModal.items || selectedLabModal.equipment || []).map((eq, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        padding: '6px 14px',
-                        backgroundColor: 'var(--bg-surface-subtle)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '13.5px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      {eq}
-                    </span>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '600' }}>
+                    Live Inventory &amp; Equipment Catalog
+                  </h4>
+                  <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                    {selectedLabModal.dbComponents ? `${selectedLabModal.dbComponents.length} Items (Worktables 1-12)` : 'Assigned Gear'}
+                  </span>
                 </div>
+
+                {selectedLabModal.dbComponents && selectedLabModal.dbComponents.length > 0 ? (
+                  <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+                    {selectedLabModal.dbComponents.map((comp) => (
+                      <div
+                        key={comp._id || comp.compId}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--bg-surface-subtle)',
+                          border: '1px solid var(--border-subtle)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>
+                              {comp.name}
+                            </span>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              padding: '2px 7px',
+                              borderRadius: 'var(--radius-pill)',
+                              backgroundColor: comp.usageType === 'Takeaway Borrowable' ? 'var(--color-emerald-bg)' : comp.usageType === 'Consumable' ? 'var(--color-blue-bg)' : 'var(--color-amber-bg)',
+                              color: comp.usageType === 'Takeaway Borrowable' ? 'var(--color-emerald-text)' : comp.usageType === 'Consumable' ? 'var(--color-blue-text)' : 'var(--color-amber-text)'
+                            }}>
+                              {comp.usageType || 'Lab-Reference Only'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {comp.spec && <span>{comp.spec} &middot;</span>}
+                            <span style={{ color: 'var(--primary-navy)', fontWeight: '500' }}>{comp.location || 'Worktable 1'}</span>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                            {comp.availableQuantity ?? comp.stockQty ?? 0} In Stock
+                          </div>
+                          <button
+                            onClick={() => navigate('/login')}
+                            style={{
+                              marginTop: '4px',
+                              padding: '4px 12px',
+                              borderRadius: 'var(--radius-pill)',
+                              background: 'var(--primary-navy)',
+                              color: '#fff',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              border: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Request
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(selectedLabModal.items || selectedLabModal.equipment || []).map((eq, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          padding: '6px 14px',
+                          backgroundColor: 'var(--bg-surface-subtle)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '13.5px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        {eq}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
 

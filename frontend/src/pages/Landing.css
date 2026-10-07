@@ -485,38 +485,6 @@
   background-color: var(--primary-navy-hover);
 }
 
-.hero-quick-tags-panel {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.quick-tag-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-right: 2px;
-}
-
-.quick-tag-btn {
-  background-color: #ffffff;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
-  padding: 4px 11px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.quick-tag-btn:hover, .quick-tag-btn.active {
-  background-color: var(--primary-navy-soft);
-  border-color: var(--primary-navy);
-  color: var(--primary-navy);
-  font-weight: 600;
-}
 
 /* Rigol DS9604 Instrument Showcase Card */
 .hero-instrument-card {

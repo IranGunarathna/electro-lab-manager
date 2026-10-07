@@ -51,13 +51,21 @@ exports.registerUser = async (req, res) => {
 // @access  Public
 exports.loginUser = async (req, res) => {
   try {
-    const { uniEmail, password } = req.body;
+    const identifier = (uniEmail || '').trim();
+    const user = await User.findOne({
+      $or: [
+        { uniEmail: identifier.toLowerCase() },
+        { userId: identifier },
+        { regNo: identifier }
+      ]
+    });
 
-    const user = await User.findOne({ uniEmail });
     if (user && (await user.matchPassword(password))) {
       res.status(200).json({
         _id: user._id,
         userId: user.userId,
+        regNo: user.regNo || user.userId,
+        semester: user.semester,
         uniEmail: user.uniEmail,
         firstName: user.firstName,
         lastName: user.lastName,

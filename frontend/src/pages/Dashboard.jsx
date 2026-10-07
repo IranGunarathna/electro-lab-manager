@@ -21,9 +21,11 @@ import {
   Calendar as CalendarIcon,
   CheckCircle,
   AlertTriangle,
-  Layers
+  Layers,
+  MapPin
 } from 'lucide-react';
 import LabCalendar from '../components/LabCalendar';
+import LabSessionsManager from '../components/LabSessionsManager';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -32,8 +34,9 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewLoanModal, setShowNewLoanModal] = useState(false);
 
-  // Backend inventory and transactions
+  // Backend inventory, transactions, and assigned lab practicals
   const [dbComponents, setDbComponents] = useState([]);
+  const [assignedSession, setAssignedSession] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // Active Loans List matching the user mockup
@@ -140,12 +143,24 @@ export default function Dashboard() {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const [compRes] = await Promise.allSettled([
-        axios.get('http://localhost:5000/api/components', { headers })
+      const studentId = user.regNo || user.uniEmail || user.userId;
+      const sessionUrl = user.role === 'Student'
+        ? `http://localhost:5000/api/lab-sessions/student/${encodeURIComponent(studentId)}`
+        : 'http://localhost:5000/api/lab-sessions';
+
+      const [compRes, sessionRes] = await Promise.allSettled([
+        axios.get('http://localhost:5000/api/components', { headers }),
+        axios.get(sessionUrl)
       ]);
 
       if (compRes.status === 'fulfilled' && compRes.value.data?.length > 0) {
         setDbComponents(compRes.value.data);
+      }
+      if (sessionRes.status === 'fulfilled' && sessionRes.value.data?.length > 0) {
+        const found = sessionRes.value.data.find((s) => s.status === 'In-Progress') || sessionRes.value.data[0];
+        setAssignedSession(found);
+      } else {
+        setAssignedSession(null);
       }
     } catch (err) {
       console.log('Using local state for dashboard demo:', err.message);
@@ -247,19 +262,11 @@ export default function Dashboard() {
             </button>
 
             <button
-              className={`nav-item ${activeNav === 'study' ? 'active' : ''}`}
-              onClick={() => setActiveNav('study')}
+              className={`nav-item ${activeNav === 'practicals' ? 'active' : ''}`}
+              onClick={() => setActiveNav('practicals')}
             >
               <GraduationCap className="nav-icon" />
-              <span>Study</span>
-            </button>
-
-            <button
-              className={`nav-item ${activeNav === 'projects' ? 'active' : ''}`}
-              onClick={() => setActiveNav('projects')}
-            >
-              <FolderKanban className="nav-icon" />
-              <span>Projects</span>
+              <span>{user.role === 'Student' ? 'My Lab Station' : 'Lab Station Allocations'}</span>
             </button>
 
             <button
@@ -267,18 +274,28 @@ export default function Dashboard() {
               onClick={() => setActiveNav('loans')}
             >
               <ArrowLeftRight className="nav-icon" />
-              <span>Loan Loans</span>
-              <ChevronDown className="nav-chevron" />
+              <span>Active Loans</span>
             </button>
 
-            <button
-              className={`nav-item ${activeNav === 'equipments' ? 'active' : ''}`}
-              onClick={() => setActiveNav('equipments')}
-            >
-              <Layers className="nav-icon" />
-              <span>Equipments</span>
-              <ChevronDown className="nav-chevron" />
-            </button>
+            {user.role !== 'Student' && (
+              <>
+                <button
+                  className={`nav-item ${activeNav === 'projects' ? 'active' : ''}`}
+                  onClick={() => setActiveNav('projects')}
+                >
+                  <FolderKanban className="nav-icon" />
+                  <span>Projects</span>
+                </button>
+
+                <button
+                  className={`nav-item ${activeNav === 'equipments' ? 'active' : ''}`}
+                  onClick={() => setActiveNav('equipments')}
+                >
+                  <Cpu className="nav-icon" />
+                  <span>All Equipments</span>
+                </button>
+              </>
+            )}
 
             <button
               className={`nav-item ${activeNav === 'notifications' ? 'active' : ''}`}
@@ -387,6 +404,62 @@ export default function Dashboard() {
                   </button>
                 </div>
 
+                {/* Upcoming Assigned Lab Session Banner */}
+                {assignedSession && (
+                  <div className="upcoming-practical-banner">
+                    <div className="banner-left-info">
+                      <div className="banner-tag-row">
+                        <span className="banner-course-pill">{assignedSession.courseCode}</span>
+                        <span className="banner-sem-pill">Semester {assignedSession.semester}</span>
+                        <span className="banner-lab-pill">Lab {assignedSession.labNumber}</span>
+                        <span className={`banner-status-pill status-${assignedSession.status.toLowerCase()}`}>
+                          {assignedSession.status === 'In-Progress' ? '🔴 Live Session' : assignedSession.status}
+                        </span>
+                      </div>
+
+                      <h3 className="banner-practical-title">{assignedSession.title}</h3>
+
+                      <div className="banner-logistics-bar">
+                        <div className="banner-log-item">
+                          <MapPin size={14} />
+                          <span>{assignedSession.labName}</span>
+                        </div>
+                        <div className="banner-log-item table-highlight">
+                          <Layers size={14} />
+                          <strong>Assigned: {assignedSession.worktable}</strong>
+                        </div>
+                        <div className="banner-log-item">
+                          <CalendarIcon size={14} />
+                          <span>
+                            {new Date(assignedSession.scheduledDate).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })}{' '}
+                            &middot; {assignedSession.timeSlot}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="banner-right-action">
+                      <div className="banner-tray-preview">
+                        <span className="tray-badge-count">
+                          {assignedSession.requiredEquipment?.length || 0}
+                        </span>
+                        <span>Components Tray</span>
+                      </div>
+                      <button
+                        className="btn-banner-view-practicals"
+                        onClick={() => setActiveNav('practicals')}
+                      >
+                        <span>Manage Practical & Tray</span>
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Active Loans Section */}
                 <section className="loans-section">
                   <div className="section-subheader">
@@ -447,6 +520,11 @@ export default function Dashboard() {
                   </div>
                 </section>
               </>
+            )}
+
+            {/* Lab Practicals Manager View */}
+            {activeNav === 'practicals' && (
+              <LabSessionsManager currentUser={user} />
             )}
 
             {/* Equipments Catalog View */}
