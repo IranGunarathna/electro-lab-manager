@@ -46,3 +46,10 @@ app.use('/api/transactions', transactionRoutes);
 
 const equipmentRoutes = require('./routes/equipmentRoutes');
 app.use('/api/equipment', equipmentRoutes);
+
+
+// Add these lines along with your other route imports
+const itemRoutes = require('./routes/itemRoutes');
+
+// Mount the route
+app.use('/api/items', itemRoutes);

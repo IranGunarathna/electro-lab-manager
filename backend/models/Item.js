@@ -1,81 +1,75 @@
 const mongoose = require('mongoose');
 
-const componentSchema = new mongoose.Schema(
+const itemSchema = new mongoose.Schema(
   {
     compId: {
       type: String,
-      required: true,
-      unique: true,
-      trim: true
+      trim: true,
     },
     name: {
       type: String,
-      required: true,
-      trim: true
-    },
-    spec: {
-      type: String,
-      trim: true
-    },
-    type: {
-      type: String,
-      default: 'General'
+      required: [true, 'Please provide an item name'],
+      trim: true,
     },
     category: {
       type: String,
-      default: 'Component'
+      required: [true, 'Please specify a category'],
+    },
+    spec: {
+      type: String,
+      trim: true,
     },
     lab: {
       type: String,
-      required: true
+      required: true,
     },
     location: {
       type: String,
       required: true,
-      default: 'Worktable 1'
-    },
-    shelfLoc: {
-      type: String,
-      default: 'Worktable 1'
+      default: 'Worktable 1',
     },
     totalQuantity: {
       type: Number,
       required: true,
       min: 0,
-      default: 1
-    },
-    stockQty: {
-      type: Number,
-      required: true,
-      min: 0,
-      default: 1
     },
     availableQuantity: {
       type: Number,
       required: true,
       min: 0,
-      default: 1
     },
     usageType: {
       type: String,
       enum: ['Takeaway Borrowable', 'Lab-Reference Only', 'Consumable'],
-      default: 'Lab-Reference Only'
+      default: 'Lab-Reference Only',
     },
     maxLoanDurationDays: {
       type: Number,
-      default: 3
+      default: 3,
     },
     status: {
       type: String,
       enum: ['Available', 'Low Stock', 'Out of Stock', 'Under Maintenance'],
-      default: 'Available'
+      default: 'Available',
     },
     description: {
       type: String,
-      trim: true
-    }
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Component', componentSchema);
+// Auto-update status based on availability before save
+itemSchema.pre('save', function (next) {
+  if (this.availableQuantity <= 0) {
+    this.status = 'Out of Stock';
+  } else if (this.availableQuantity < 5) {
+    this.status = 'Low Stock';
+  } else if (this.status !== 'Under Maintenance') {
+    this.status = 'Available';
+  }
+  next();
+});
+
+module.exports = mongoose.model('Item', itemSchema);
