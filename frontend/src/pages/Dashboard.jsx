@@ -22,113 +22,37 @@ import {
   CheckCircle,
   AlertTriangle,
   Layers,
-  MapPin
+  MapPin,
+  Clock3,
+  CheckCircle2,
+  XCircle,
+  PackageCheck,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import LabCalendar from '../components/LabCalendar';
 import LabSessionsManager from '../components/LabSessionsManager';
+import NewBorrowModal from '../components/NewBorrowModal';
+import BorrowApprovalModal from '../components/BorrowApprovalModal';
+import AdminComponentModal from '../components/AdminComponentModal';
+import { getAuthToken } from '../api/axios';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const [activeNav, setActiveNav] = useState('dashboard');
-  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+  const [showNewBorrowModal, setShowNewBorrowModal] = useState(false);
+  const [approvalModal, setApprovalModal] = useState({ isOpen: false, borrow: null, mode: 'APPROVE' });
+  const [adminCompModal, setAdminCompModal] = useState({ isOpen: false, editComponent: null });
 
-  // Backend inventory, transactions, and assigned lab practicals
+  // Backend state
   const [dbComponents, setDbComponents] = useState([]);
   const [assignedSession, setAssignedSession] = useState(null);
+  const [borrows, setBorrows] = useState([]);
+  const [adminStats, setAdminStats] = useState({ total: 0, pending: 0, approved: 0, active: 0, rejected: 0, returned: 0 });
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Active Loans List matching the user mockup
-  const [activeLoans, setActiveLoans] = useState([
-    {
-      id: 1,
-      title: 'Electronic Component',
-      project: 'Project 1',
-      dueText: '1 hrs ago',
-      image: '/assets/components/ic_chip.jpg',
-      category: 'ICs',
-      progress: { green: 70, amber: 20, red: 10 },
-      status: 'Active'
-    },
-    {
-      id: 2,
-      title: 'Electronic Component',
-      project: 'Project 2',
-      dueText: '23 hrs ago',
-      image: '/assets/components/processor.jpg',
-      category: 'Microcontrollers',
-      progress: { green: 40, amber: 35, red: 25 },
-      status: 'Review'
-    },
-    {
-      id: 3,
-      title: 'Electronic Component',
-      project: 'Project 3',
-      dueText: '17 hrs ago',
-      image: '/assets/components/sensor.jpg',
-      category: 'Sensors',
-      progress: { green: 80, amber: 15, red: 5 },
-      status: 'Active'
-    },
-    {
-      id: 4,
-      title: 'Project Linas',
-      project: 'Project 1',
-      dueText: '8 hrs ago',
-      image: '/assets/components/dev_board.jpg',
-      category: 'DevBoards',
-      progress: { green: 90, amber: 10, red: 0 },
-      status: 'Active'
-    },
-    {
-      id: 5,
-      title: 'Electronic Component',
-      project: 'Project 2',
-      dueText: '21 hrs ago',
-      image: '/assets/components/ic_chip.jpg',
-      category: 'ICs',
-      progress: { green: 30, amber: 40, red: 30 },
-      status: 'Due Soon'
-    },
-    {
-      id: 6,
-      title: 'Project Complier',
-      project: 'Project 3',
-      dueText: '12 hrs ago',
-      image: '/assets/components/processor.jpg',
-      category: 'Microcontrollers',
-      progress: { green: 55, amber: 25, red: 20 },
-      status: 'Active'
-    }
-  ]);
-
-  // Notifications matching mockup
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'amber',
-      title: 'Waitlist Alert',
-      desc: 'Your waitlist alerts an electronic equipment: core waitlist.',
-      time: '2 minutes ago'
-    },
-    {
-      id: 2,
-      type: 'emerald',
-      title: 'Waitlist Alert',
-      desc: 'Your waitlist equipment alert: lab collection waitlist ready.',
-      time: '5 minutes ago'
-    }
-  ]);
-
-  // New Loan Form State
-  const [loanForm, setLoanForm] = useState({
-    componentName: 'Rigol DS1054Z Digital Oscilloscope',
-    project: 'Project 1',
-    category: 'Equipment',
-    durationDays: '3',
-    notes: ''
-  });
 
   const rawUser = localStorage.getItem('userInfo') || localStorage.getItem('user');
   const user = rawUser ? JSON.parse(rawUser) : { firstName: 'Hiran', lastName: 'Gunarathna', role: 'Student' };
@@ -140,7 +64,7 @@ export default function Dashboard() {
   const fetchBackendData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const studentId = user.regNo || user.uniEmail || user.userId;
@@ -148,9 +72,15 @@ export default function Dashboard() {
         ? `http://localhost:5000/api/lab-sessions/student/${encodeURIComponent(studentId)}`
         : 'http://localhost:5000/api/lab-sessions';
 
-      const [compRes, sessionRes] = await Promise.allSettled([
+      const borrowUrl = (user.role === 'Admin' || user.role === 'LabAssistant')
+        ? 'http://localhost:5000/api/borrows'
+        : 'http://localhost:5000/api/borrows/my-borrows';
+
+      const [compRes, sessionRes, borrowRes, notifRes] = await Promise.allSettled([
         axios.get('http://localhost:5000/api/components', { headers }),
-        axios.get(sessionUrl)
+        axios.get(sessionUrl, { headers }),
+        axios.get(borrowUrl, { headers }),
+        axios.get('http://localhost:5000/api/borrows/notifications', { headers })
       ]);
 
       if (compRes.status === 'fulfilled' && compRes.value.data?.length > 0) {
@@ -162,8 +92,22 @@ export default function Dashboard() {
       } else {
         setAssignedSession(null);
       }
+
+      if (borrowRes.status === 'fulfilled') {
+        const data = borrowRes.value.data;
+        if (Array.isArray(data)) {
+          setBorrows(data);
+        } else if (data && data.borrows) {
+          setBorrows(data.borrows);
+          if (data.stats) setAdminStats(data.stats);
+        }
+      }
+
+      if (notifRes.status === 'fulfilled' && Array.isArray(notifRes.value.data)) {
+        setNotifications(notifRes.value.data);
+      }
     } catch (err) {
-      console.log('Using local state for dashboard demo:', err.message);
+      console.log('Error fetching backend data:', err.message);
     } finally {
       setLoading(false);
     }
@@ -180,59 +124,60 @@ export default function Dashboard() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const handleCreateLoan = async (e) => {
-    e.preventDefault();
-    
-    // Choose appropriate image based on category or form
-    let img = '/assets/components/dev_board.jpg';
-    if (loanForm.category === 'ICs') img = '/assets/components/ic_chip.jpg';
-    if (loanForm.category === 'Sensors') img = '/assets/components/sensor.jpg';
-    if (loanForm.category === 'Microcontrollers') img = '/assets/components/processor.jpg';
-
-    const newLoan = {
-      id: Date.now(),
-      title: loanForm.componentName,
-      project: loanForm.project,
-      dueText: `in ${loanForm.durationDays} days`,
-      image: img,
-      category: loanForm.category,
-      progress: { green: 100, amber: 0, red: 0 },
-      status: 'Active'
-    };
-
-    setActiveLoans([newLoan, ...activeLoans]);
-    setShowNewLoanModal(false);
-
-    // Also attempt backend borrow if user is logged in
-    try {
-      const token = localStorage.getItem('token');
-      if (token && dbComponents.length > 0) {
-        const target = dbComponents.find(c => c.spec?.toLowerCase().includes(loanForm.componentName.toLowerCase())) || dbComponents[0];
-        if (target) {
-          await axios.post('http://localhost:5000/api/transactions/borrow', {
-            componentId: target._id,
-            quantity: 1
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        }
-      }
-    } catch (err) {
-      console.log('Backend sync simulated:', err.message);
+  // Helper to determine component thumbnail
+  const getComponentImage = (compName = '', spec = '', lab = '', item = null) => {
+    // 1. Direct custom imageUrl on item or populated component
+    const customImg = item?.imageUrl || item?.component?.imageUrl;
+    if (customImg) {
+      return customImg.startsWith('/uploads/') ? `http://localhost:5000${customImg}` : customImg;
     }
+
+    // 2. Lookup in dbComponents by matching name, spec, or compId
+    if (dbComponents && dbComponents.length > 0) {
+      const match = dbComponents.find(
+        (c) =>
+          (c.name && compName && c.name.toLowerCase() === compName.toLowerCase()) ||
+          (c.spec && spec && c.spec.toLowerCase() === spec.toLowerCase()) ||
+          (item?.componentId && c.compId === item.componentId) ||
+          (item?._id && c._id === item._id)
+      );
+      if (match?.imageUrl) {
+        return match.imageUrl.startsWith('/uploads/') ? `http://localhost:5000${match.imageUrl}` : match.imageUrl;
+      }
+    }
+
+    // 3. Fallback to category asset
+    const text = `${compName} ${spec} ${lab}`.toLowerCase();
+    if (text.includes('ic') || text.includes('diode') || text.includes('74hc') || text.includes('resistor')) {
+      return '/assets/components/ic_chip.jpg';
+    }
+    if (text.includes('esp32') || text.includes('board') || text.includes('breadboard') || text.includes('dev')) {
+      return '/assets/components/dev_board.jpg';
+    }
+    if (text.includes('sensor') || text.includes('sht31') || text.includes('transceiver') || text.includes('rf')) {
+      return '/assets/components/sensor.jpg';
+    }
+    if (text.includes('stm32') || text.includes('dsp') || text.includes('microcontroller') || text.includes('processor') || text.includes('oscilloscope')) {
+      return '/assets/components/processor.jpg';
+    }
+    return '/assets/components/dev_board.jpg';
   };
 
-  // Filtered loans list based on search and category
-  const filteredLoans = useMemo(() => {
-    return activeLoans.filter((item) => {
+  // Filtered borrows list based on search and status
+  const filteredBorrows = useMemo(() => {
+    return borrows.filter((item) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.project.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory =
-        filterCategory === 'All' || item.category === filterCategory;
-      return matchesSearch && matchesCategory;
+        (item.componentName || '').toLowerCase().includes(q) ||
+        (item.componentSpec || '').toLowerCase().includes(q) ||
+        (item.project || '').toLowerCase().includes(q) ||
+        (item.studentName || '').toLowerCase().includes(q) ||
+        (item.studentRegNo || '').toLowerCase().includes(q);
+
+      const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
+      return matchesSearch && matchesStatus;
     });
-  }, [activeLoans, searchQuery, filterCategory]);
+  }, [borrows, searchQuery, filterStatus]);
 
   return (
     <div className="dashboard-layout">
@@ -274,7 +219,22 @@ export default function Dashboard() {
               onClick={() => setActiveNav('loans')}
             >
               <ArrowLeftRight className="nav-icon" />
-              <span>Active Loans</span>
+              <span>{user.role === 'Student' ? 'My Borrowings' : 'Borrow Approvals'}</span>
+              {user.role !== 'Student' && adminStats.pending > 0 && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '2px 7px',
+                    borderRadius: '10px'
+                  }}
+                >
+                  {adminStats.pending}
+                </span>
+              )}
             </button>
 
             {user.role !== 'Student' && (
@@ -303,6 +263,21 @@ export default function Dashboard() {
             >
               <Bell className="nav-icon" />
               <span>Notifications</span>
+              {notifications.length > 0 && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '2px 7px',
+                    borderRadius: '10px'
+                  }}
+                >
+                  {notifications.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -347,7 +322,7 @@ export default function Dashboard() {
             <input
               type="text"
               className="search-input"
-              placeholder="Search Students / Equipment..."
+              placeholder="Search components, projects, or registrations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -355,8 +330,12 @@ export default function Dashboard() {
 
           {/* Topbar Right Actions */}
           <div className="topbar-actions">
-            <button className="icon-btn" title="Messages">
-              <Mail size={18} />
+            <button
+              className="icon-btn"
+              title="Refresh Data"
+              onClick={fetchBackendData}
+            >
+              <RefreshCw size={17} className={loading ? 'spin' : ''} />
             </button>
 
             <button
@@ -377,7 +356,7 @@ export default function Dashboard() {
                   {user.firstName || 'Student'} {user.lastName || ''}
                 </span>
                 <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                  {user.role || 'EE Student'}
+                  {user.role === 'Student' ? (user.regNo || 'EE Student') : user.role}
                 </span>
               </div>
             </div>
@@ -392,15 +371,15 @@ export default function Dashboard() {
           <main className="workspace-area">
             {activeNav === 'dashboard' && (
               <>
-                {/* Workspace Title & "+ New Loan" Button */}
+                {/* Workspace Title & "+ New Borrow" Button */}
                 <div className="workspace-header">
                   <h1 className="workspace-title">My Workspace</h1>
                   <button
                     className="btn-primary-loan"
-                    onClick={() => setShowNewLoanModal(true)}
+                    onClick={() => setShowNewBorrowModal(true)}
                   >
                     <Plus size={16} />
-                    <span>New My Loan</span>
+                    <span>New Borrow</span>
                   </button>
                 </div>
 
@@ -460,66 +439,509 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Active Loans Section */}
+                {/* Borrowings Section (Student or Admin Summary) */}
                 <section className="loans-section">
                   <div className="section-subheader">
-                    <h2 className="section-title">Active Loans</h2>
-                    <select
-                      className="filter-select"
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                    >
-                      <option value="All">All Items</option>
-                      <option value="ICs">Integrated Circuits</option>
-                      <option value="Microcontrollers">Microcontrollers</option>
-                      <option value="Sensors">Sensors</option>
-                      <option value="DevBoards">Development Boards</option>
-                    </select>
+                    <div>
+                      <h2 className="section-title">
+                        {user.role === 'Student' ? 'My Borrowings' : 'Active Borrowings & Requests'}
+                      </h2>
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                        {filteredBorrows.length} record(s) found
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <select
+                        className="filter-select"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                      >
+                        <option value="All">All Statuses</option>
+                        <option value="Pending">Pending Approval</option>
+                        <option value="Approved">Approved (Pickup Ready)</option>
+                        <option value="Active">Active (In Use)</option>
+                        <option value="Returned">Returned</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </div>
                   </div>
 
-                  {/* 3-Column Card Grid */}
-                  <div className="cards-grid">
-                    {filteredLoans.map((loan) => (
-                      <div key={loan.id} className="loan-card">
-                        <div className="card-img-container">
-                          <img
-                            src={loan.image}
-                            alt={loan.title}
-                            className="card-img"
-                            onError={(e) => {
-                              e.target.src = '/assets/components/dev_board.jpg';
-                            }}
-                          />
-                        </div>
-
-                        <div className="card-title">{loan.title}</div>
-                        <div className="card-project">{loan.project}</div>
-
-                        <div className="card-due-row">
-                          <span className="card-due-label">Due Date</span>
-                          <span className="card-due-time">{loan.dueText}</span>
-                        </div>
-
-                        {/* Segmented Progress Bar (Green, Amber, Red) */}
-                        <div className="card-progress-bar">
-                          <div
-                            className="progress-segment seg-green"
-                            style={{ flex: loan.progress.green }}
-                          ></div>
-                          <div
-                            className="progress-segment seg-amber"
-                            style={{ flex: loan.progress.amber }}
-                          ></div>
-                          <div
-                            className="progress-segment seg-red"
-                            style={{ flex: loan.progress.red }}
-                          ></div>
-                        </div>
+                  {/* Empty State */}
+                  {filteredBorrows.length === 0 ? (
+                    <div className="borrow-empty-box">
+                      <div className="borrow-empty-icon">
+                        <ArrowLeftRight size={28} />
                       </div>
-                    ))}
-                  </div>
+                      <div>
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          No Borrowing Records Found
+                        </h3>
+                        <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto' }}>
+                          {user.role === 'Student'
+                            ? "You don't have any active borrowings or pending requests. Need an oscilloscope, development board, or ICs for your project?"
+                            : 'No borrow requests matching the selected filter in the laboratory database.'}
+                        </p>
+                      </div>
+                      <button
+                        className="btn-primary-loan"
+                        style={{ padding: '9px 20px', fontSize: '14px' }}
+                        onClick={() => setShowNewBorrowModal(true)}
+                      >
+                        <Plus size={16} />
+                        <span>New Borrow</span>
+                      </button>
+                    </div>
+                  ) : (
+                    /* 3-Column Borrowings Card Grid */
+                    <div className="cards-grid">
+                      {filteredBorrows.map((b) => (
+                        <div key={b._id} className="borrow-card">
+                          {/* Image Container */}
+                          <div className="card-img-container">
+                            <img
+                              src={getComponentImage(b.componentName, b.componentSpec, b.lab)}
+                              alt={b.componentName}
+                              className="card-img"
+                              onError={(e) => {
+                                e.target.src = '/assets/components/dev_board.jpg';
+                              }}
+                            />
+                          </div>
+
+                          {/* Status Badge & Header */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                            <div className="card-title" style={{ fontSize: '16px', lineHeight: '1.3' }}>
+                              {b.componentName}
+                            </div>
+                            <span className={`borrow-badge badge-${b.status.toLowerCase()}`}>
+                              {b.status === 'Pending' && '🟡 Pending'}
+                              {b.status === 'Approved' && '🟢 Approved'}
+                              {b.status === 'Active' && '🔵 In Use'}
+                              {b.status === 'Rejected' && '🔴 Rejected'}
+                              {b.status === 'Returned' && '⚪ Returned'}
+                            </span>
+                          </div>
+
+                          {/* Project & Location Details */}
+                          <div className="card-project" style={{ fontSize: '13.5px', marginBottom: '4px' }}>
+                            <strong>Project:</strong> {b.project}
+                          </div>
+
+                          <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                            <MapPin size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                            {b.lab} &bull; {b.location || 'Bench Counter'}
+                          </div>
+
+                          {/* Specific Information Box based on Status */}
+                          <div className="borrow-info-box">
+                            {b.status === 'Pending' && (
+                              <>
+                                <div>
+                                  <strong>Requested Duration:</strong> {b.durationDays} Days (Qty: {b.quantity})
+                                </div>
+                                <div style={{ color: '#d97706', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <Clock3 size={13} />
+                                  <span>Awaiting Lab Admin approval</span>
+                                </div>
+                              </>
+                            )}
+
+                            {b.status === 'Approved' && (
+                              <>
+                                <div style={{ color: '#059669', fontWeight: '700' }}>
+                                  Ready for Lab Counter Pickup
+                                </div>
+                                <div>
+                                  <strong>Pickup:</strong> {b.pickupTime || 'Today during lab hours'}
+                                </div>
+                                <div>
+                                  <strong>Allocated:</strong> {b.allocatedTime || `${b.durationDays} Days`}
+                                </div>
+                                {b.adminNotes && (
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '11.5px', fontStyle: 'italic' }}>
+                                    &ldquo;{b.adminNotes}&rdquo;
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {b.status === 'Active' && (
+                              <>
+                                <div style={{ color: '#2563eb', fontWeight: '700' }}>
+                                  Item Currently in Active Use
+                                </div>
+                                <div>
+                                  <strong>Allocated Time:</strong> {b.allocatedTime || `${b.durationDays} Days`}
+                                </div>
+                                <div>
+                                  <strong>Quantity:</strong> {b.quantity} unit(s)
+                                </div>
+                              </>
+                            )}
+
+                            {b.status === 'Rejected' && (
+                              <>
+                                <div style={{ color: '#dc2626', fontWeight: '700' }}>
+                                  Request Declined by Admin
+                                </div>
+                                <div>
+                                  <strong>Reason:</strong> {b.rejectionReason || 'Equipment reserved for scheduled classes.'}
+                                </div>
+                              </>
+                            )}
+
+                            {b.status === 'Returned' && (
+                              <>
+                                <div style={{ color: '#64748b', fontWeight: '600' }}>
+                                  Returned & Restocked
+                                </div>
+                                <div>
+                                  <strong>Returned:</strong>{' '}
+                                  {b.returnedAt ? new Date(b.returnedAt).toLocaleDateString() : 'Completed'}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Admin Quick Action Button on Cards */}
+                          {user.role !== 'Student' && (
+                            <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                              {b.status === 'Pending' && (
+                                <>
+                                  <button
+                                    onClick={() => setApprovalModal({ isOpen: true, borrow: b, mode: 'APPROVE' })}
+                                    style={{
+                                      flex: 1,
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      background: '#059669',
+                                      color: '#fff',
+                                      fontSize: '12.5px',
+                                      fontWeight: '600',
+                                      border: 'none',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => setApprovalModal({ isOpen: true, borrow: b, mode: 'REJECT' })}
+                                    style={{
+                                      flex: 1,
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      background: '#dc2626',
+                                      color: '#fff',
+                                      fontSize: '12.5px',
+                                      fontWeight: '600',
+                                      border: 'none',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                              {b.status === 'Approved' && (
+                                <button
+                                  onClick={() => setApprovalModal({ isOpen: true, borrow: b, mode: 'HANDOVER' })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    background: '#2563eb',
+                                    color: '#fff',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Handover to Student
+                                </button>
+                              )}
+                              {b.status === 'Active' && (
+                                <button
+                                  onClick={() => setApprovalModal({ isOpen: true, borrow: b, mode: 'RETURN' })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    background: '#475569',
+                                    color: '#fff',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Process Return
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </>
+            )}
+
+            {/* Admin Borrow Approvals / Student Borrowings View */}
+            {activeNav === 'loans' && (
+              <div>
+                <div className="workspace-header">
+                  <div>
+                    <h1 className="workspace-title">
+                      {user.role === 'Student' ? 'My Borrow History & Active Gear' : 'Borrow Requests & Approvals'}
+                    </h1>
+                    <span style={{ fontSize: '13.5px', color: 'var(--text-muted)' }}>
+                      {user.role === 'Student'
+                        ? 'Track equipment pickup times, loan deadlines, and return statuses.'
+                        : 'Review student borrow requests, allocate pickup windows, or process equipment returns.'}
+                    </span>
+                  </div>
+
+                  <button className="btn-primary-loan" onClick={() => setShowNewBorrowModal(true)}>
+                    <Plus size={16} />
+                    <span>New Borrow</span>
+                  </button>
+                </div>
+
+                {/* Admin Quick Stat Overview Pills */}
+                {user.role !== 'Student' && (
+                  <div className="borrow-stats-row">
+                    <div className="borrow-stat-pill" style={{ borderLeft: '4px solid #f59e0b' }}>
+                      <span className="borrow-stat-val" style={{ color: '#d97706' }}>{adminStats.pending}</span>
+                      <span className="borrow-stat-lbl">Pending Review</span>
+                    </div>
+                    <div className="borrow-stat-pill" style={{ borderLeft: '4px solid #10b981' }}>
+                      <span className="borrow-stat-val" style={{ color: '#059669' }}>{adminStats.approved}</span>
+                      <span className="borrow-stat-lbl">Ready for Pickup</span>
+                    </div>
+                    <div className="borrow-stat-pill" style={{ borderLeft: '4px solid #2563eb' }}>
+                      <span className="borrow-stat-val" style={{ color: '#2563eb' }}>{adminStats.active}</span>
+                      <span className="borrow-stat-lbl">Active in Use</span>
+                    </div>
+                    <div className="borrow-stat-pill" style={{ borderLeft: '4px solid #64748b' }}>
+                      <span className="borrow-stat-val" style={{ color: '#64748b' }}>{adminStats.returned}</span>
+                      <span className="borrow-stat-lbl">Returned / Restocked</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table View of Borrow Requests */}
+                <div className="widget-box" style={{ padding: '0', overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {['All', 'Pending', 'Approved', 'Active', 'Returned', 'Rejected'].map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setFilterStatus(st)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            border: '1px solid var(--border-subtle)',
+                            background: filterStatus === st ? 'var(--primary-navy)' : 'var(--bg-surface)',
+                            color: filterStatus === st ? '#ffffff' : 'var(--text-secondary)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
+
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                      Showing {filteredBorrows.length} request(s)
+                    </span>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', minWidth: '920px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead style={{ background: 'var(--bg-surface-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <tr>
+                          {user.role !== 'Student' && (
+                            <th style={{ padding: '14px 18px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', minWidth: '180px' }}>
+                              STUDENT
+                            </th>
+                          )}
+                          <th style={{ padding: '14px 18px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', minWidth: '200px' }}>
+                            EQUIPMENT / COMPONENT
+                          </th>
+                          <th style={{ padding: '14px 18px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', minWidth: '180px' }}>
+                            PROJECT & LAB
+                          </th>
+                          <th style={{ padding: '14px 18px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', minWidth: '110px' }}>
+                            STATUS
+                          </th>
+                          <th style={{ padding: '14px 18px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', minWidth: '160px' }}>
+                            TIMELINE & PICKUP
+                          </th>
+                          <th style={{ padding: '14px 18px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', textAlign: 'right', minWidth: '170px', whiteSpace: 'nowrap' }}>
+                            ACTION
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBorrows.length === 0 ? (
+                          <tr>
+                            <td colSpan={user.role !== 'Student' ? 6 : 5} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              No requests found matching &ldquo;{filterStatus}&rdquo;.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredBorrows.map((row) => (
+                            <tr key={row._id} style={{ borderBottom: '1px solid var(--border-divider)' }}>
+                              {user.role !== 'Student' && (
+                                <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                                  <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                    {row.studentName}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    {row.studentRegNo} &bull; {row.studentEmail}
+                                  </div>
+                                </td>
+                              )}
+                              <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                                <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                  {row.componentName}
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                  Qty: {row.quantity} &bull; {row.componentSpec}
+                                </div>
+                              </td>
+                              <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                                <div style={{ fontWeight: '500', fontSize: '13.5px', color: 'var(--text-primary)' }}>
+                                  {row.project}
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                  {row.lab} ({row.location || 'Bench Counter'})
+                                </div>
+                              </td>
+                              <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                                <span className={`borrow-badge badge-${row.status.toLowerCase()}`}>
+                                  {row.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 18px', fontSize: '13px', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>
+                                {row.status === 'Approved' && (
+                                  <div>
+                                    <div style={{ color: '#059669', fontWeight: '600' }}>{row.pickupTime}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.allocatedTime}</div>
+                                  </div>
+                                )}
+                                {row.status === 'Active' && <div>{row.allocatedTime || `${row.durationDays} Days`}</div>}
+                                {row.status === 'Pending' && <div>Requested: {row.durationDays} Days</div>}
+                                {row.status === 'Rejected' && <div style={{ color: '#dc2626' }}>{row.rejectionReason}</div>}
+                                {row.status === 'Returned' && <div>Returned on {new Date(row.returnedAt || row.updatedAt).toLocaleDateString()}</div>}
+                              </td>
+                              <td style={{ padding: '14px 18px', textAlign: 'right', minWidth: '170px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                {user.role !== 'Student' ? (
+                                  <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                                    {row.status === 'Pending' && (
+                                      <>
+                                        <button
+                                          onClick={() => setApprovalModal({ isOpen: true, borrow: row, mode: 'APPROVE' })}
+                                          style={{
+                                            padding: '6px 14px',
+                                            borderRadius: '6px',
+                                            background: '#059669',
+                                            color: '#fff',
+                                            fontSize: '12.5px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                          }}
+                                        >
+                                          Approve
+                                        </button>
+                                        <button
+                                          onClick={() => setApprovalModal({ isOpen: true, borrow: row, mode: 'REJECT' })}
+                                          style={{
+                                            padding: '6px 14px',
+                                            borderRadius: '6px',
+                                            background: '#dc2626',
+                                            color: '#fff',
+                                            fontSize: '12.5px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                          }}
+                                        >
+                                          Reject
+                                        </button>
+                                      </>
+                                    )}
+                                    {row.status === 'Approved' && (
+                                      <button
+                                        onClick={() => setApprovalModal({ isOpen: true, borrow: row, mode: 'HANDOVER' })}
+                                        style={{
+                                          padding: '6px 14px',
+                                          borderRadius: '6px',
+                                          background: '#2563eb',
+                                          color: '#fff',
+                                          fontSize: '12.5px',
+                                          fontWeight: '600',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        Handover
+                                      </button>
+                                    )}
+                                    {row.status === 'Active' && (
+                                      <button
+                                        onClick={() => setApprovalModal({ isOpen: true, borrow: row, mode: 'RETURN' })}
+                                        style={{
+                                          padding: '6px 14px',
+                                          borderRadius: '6px',
+                                          background: '#475569',
+                                          color: '#fff',
+                                          fontSize: '12.5px',
+                                          fontWeight: '600',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        Return
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setShowNewBorrowModal(true)}
+                                    style={{
+                                      padding: '6px 14px',
+                                      borderRadius: '6px',
+                                      background: 'var(--bg-surface-subtle)',
+                                      color: 'var(--text-primary)',
+                                      fontSize: '12.5px',
+                                      border: '1px solid var(--border-subtle)',
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    Borrow More
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Lab Practicals Manager View */}
@@ -531,90 +953,102 @@ export default function Dashboard() {
             {activeNav === 'equipments' && (
               <div>
                 <div className="workspace-header">
-                  <h1 className="workspace-title">Equipments & Inventory Catalog</h1>
-                  <button
-                    className="btn-primary-loan"
-                    onClick={() => setShowNewLoanModal(true)}
-                  >
+                  <div>
+                    <h1 className="workspace-title">Faculty Equipments & Inventory Catalog</h1>
+                    <span style={{ fontSize: '13.5px', color: 'var(--text-muted)' }}>
+                      Browse 300+ components, instruments, and development modules across all 8 department labs.
+                    </span>
+                  </div>
+
+                  <button className="btn-primary-loan" onClick={() => setShowNewBorrowModal(true)}>
                     <Plus size={16} />
-                    <span>Request Item</span>
+                    <span>New Borrow</span>
                   </button>
                 </div>
 
                 <div className="widget-box" style={{ padding: '0', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ background: 'var(--bg-surface-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <tr>
-                        <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>EQUIPMENT / COMPONENT</th>
-                        <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>CATEGORY</th>
-                        <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>LOCATION</th>
-                        <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>AVAILABILITY</th>
-                        <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(dbComponents.length > 0 ? dbComponents : [
-                        { _id: '1', compId: 'OSC-1054', spec: 'Rigol DS1054Z 50MHz 4-CH Digital Oscilloscope', type: 'Instrument', shelfLoc: 'Lab R1 - Bench 3', stockQty: 4 },
-                        { _id: '2', compId: 'ESP32-WROOM', spec: 'ESP32-WROOM-32 Wi-Fi & BLE Development Board', type: 'Microcontroller', shelfLoc: 'Cabinet B - Shelf 2', stockQty: 28 },
-                        { _id: '3', compId: 'FLK-117', spec: 'Fluke 117 True RMS Digital Multimeter', type: 'Instrument', shelfLoc: 'Lab R2 - Bench 1', stockQty: 12 },
-                        { _id: '4', compId: 'STM32F4', spec: 'STM32F401 Black Pill ARM Cortex M4', type: 'Microcontroller', shelfLoc: 'Cabinet A - Shelf 4', stockQty: 19 },
-                        { _id: '5', compId: 'SHT31-D', spec: 'Sensirion SHT31-D High Accuracy Temp/Humidity Sensor', type: 'Sensor', shelfLoc: 'Drawer 04 - Bin 2', stockQty: 35 }
-                      ]).map((item) => (
-                        <tr key={item._id} style={{ borderBottom: '1px solid var(--border-divider)' }}>
-                          <td style={{ padding: '16px 20px', fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>{item.spec || item.name}</td>
-                          <td style={{ padding: '16px 20px', fontSize: '14.5px', color: 'var(--text-secondary)' }}>{item.type || item.category || 'General'}</td>
-                          <td style={{ padding: '16px 20px', color: 'var(--text-muted)', fontSize: '14px' }}>{item.shelfLoc || 'EE Lab R1'}</td>
-                          <td style={{ padding: '16px 20px' }}>
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '5px 12px',
-                              borderRadius: 'var(--radius-pill)',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              backgroundColor: (item.stockQty ?? 10) > 0 ? 'var(--color-emerald-bg)' : 'var(--color-rose-bg)',
-                              color: (item.stockQty ?? 10) > 0 ? 'var(--color-emerald-text)' : 'var(--color-rose-text)'
-                            }}>
-                              {(item.stockQty ?? 10) > 0 ? `${item.stockQty ?? 10} In Stock` : 'Out of Stock'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '16px 20px' }}>
-                            <button
-                              onClick={() => {
-                                setLoanForm({
-                                  ...loanForm,
-                                  componentName: item.spec || item.name,
-                                  category: item.type || 'Equipment'
-                                });
-                                setShowNewLoanModal(true);
-                              }}
-                              style={{
-                                padding: '8px 16px',
-                                borderRadius: 'var(--radius-pill)',
-                                background: 'var(--primary-navy)',
-                                color: '#ffffff',
-                                fontSize: '13.5px',
-                                fontWeight: '500'
-                              }}
-                            >
-                              Borrow
-                            </button>
-                          </td>
+                  <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead style={{ background: 'var(--bg-surface-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <tr>
+                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>EQUIPMENT / COMPONENT</th>
+                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>LABORATORY</th>
+                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>LOCATION</th>
+                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>AVAILABILITY</th>
+                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)', textAlign: 'right', minWidth: '120px' }}>ACTION</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {dbComponents.slice(0, 50).map((item) => {
+                          const stock = item.availableQuantity ?? item.stockQty ?? 0;
+                          return (
+                            <tr key={item._id} style={{ borderBottom: '1px solid var(--border-divider)' }}>
+                              <td style={{ padding: '16px 20px' }}>
+                                <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                  {item.spec || item.name}
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                  Code: {item.compId} &bull; {item.type || item.category || 'Component'}
+                                </div>
+                              </td>
+                              <td style={{ padding: '16px 20px', fontSize: '13.5px', color: 'var(--text-secondary)' }}>
+                                {item.lab}
+                              </td>
+                              <td style={{ padding: '16px 20px', color: 'var(--text-muted)', fontSize: '13.5px' }}>
+                                {item.location || item.shelfLoc || 'Lab Worktable'}
+                              </td>
+                              <td style={{ padding: '16px 20px' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '5px 12px',
+                                    borderRadius: 'var(--radius-pill)',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    backgroundColor: stock > 0 ? 'var(--color-emerald-bg)' : 'var(--color-rose-bg)',
+                                    color: stock > 0 ? 'var(--color-emerald-text)' : 'var(--color-rose-text)'
+                                  }}
+                                >
+                                  {stock > 0 ? `${stock} In Stock` : 'Out of Stock'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                                <button
+                                  onClick={() => setShowNewBorrowModal(true)}
+                                  disabled={stock <= 0}
+                                  style={{
+                                    padding: '8px 16px',
+                                    borderRadius: 'var(--radius-pill)',
+                                    background: stock > 0 ? 'var(--primary-navy)' : '#94a3b8',
+                                    color: '#ffffff',
+                                    fontSize: '13.5px',
+                                    fontWeight: '500',
+                                    border: 'none',
+                                    cursor: stock > 0 ? 'pointer' : 'not-allowed',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  Borrow
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Projects / Study / Notifications Other Views */}
+            {/* Projects View */}
             {activeNav === 'projects' && (
               <div>
                 <div className="workspace-header">
                   <h1 className="workspace-title">Active Engineering Projects</h1>
-                  <button className="btn-primary-loan" onClick={() => setShowNewLoanModal(true)}>
+                  <button className="btn-primary-loan" onClick={() => setShowNewBorrowModal(true)}>
                     <Plus size={16} />
-                    <span>Assign Equipment</span>
+                    <span>New Borrow</span>
                   </button>
                 </div>
                 <div className="cards-grid">
@@ -622,12 +1056,12 @@ export default function Dashboard() {
                     <div key={idx} className="loan-card">
                       <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>{proj}</h3>
                       <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-                        EE4207 Capstone laboratory cohort. 2 active loans assigned.
+                        EE4207 Capstone laboratory cohort. Active equipment borrowings assigned.
                       </p>
                       <button
                         className="btn-view-more"
                         onClick={() => {
-                          setFilterCategory('All');
+                          setFilterStatus('All');
                           setActiveNav('dashboard');
                         }}
                       >
@@ -639,36 +1073,44 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Notifications View */}
             {activeNav === 'notifications' && (
               <div>
                 <div className="workspace-header">
                   <h1 className="workspace-title">Notifications & Alerts</h1>
                 </div>
                 <div className="widget-box" style={{ maxWidth: '680px' }}>
-                  <div className="notifications-list">
-                    {notifications.map((n) => (
-                      <div key={n.id} className="notif-card">
-                        <div className={`notif-icon-circle notif-${n.type}`}>
-                          <Bell size={16} />
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No new notifications right now.
+                    </div>
+                  ) : (
+                    <div className="notifications-list">
+                      {notifications.map((n) => (
+                        <div key={n.id} className="notif-card">
+                          <div className={`notif-icon-circle notif-${n.type || 'emerald'}`}>
+                            <Bell size={16} />
+                          </div>
+                          <div className="notif-content">
+                            <div className="notif-heading">{n.title}</div>
+                            <div className="notif-desc">{n.desc}</div>
+                            <div className="notif-time">{n.time}</div>
+                          </div>
+                          <button
+                            className="notif-close-btn"
+                            onClick={() => handleDismissNotif(n.id)}
+                          >
+                            <X size={14} />
+                          </button>
                         </div>
-                        <div className="notif-content">
-                          <div className="notif-heading">{n.title}</div>
-                          <div className="notif-desc">{n.desc}</div>
-                          <div className="notif-time">{n.time}</div>
-                        </div>
-                        <button
-                          className="notif-close-btn"
-                          onClick={() => handleDismissNotif(n.id)}
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
+            {/* Settings View */}
             {activeNav === 'settings' && (
               <div>
                 <div className="workspace-header">
@@ -679,7 +1121,11 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
                       <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Full Name</label>
-                      <input className="form-input" style={{ width: '100%', marginTop: '4px' }} defaultValue={`${user.firstName || 'Hiran'} ${user.lastName || 'Gunarathna'}`} />
+                      <input className="form-input" style={{ width: '100%', marginTop: '4px' }} defaultValue={`${user.firstName || 'Student'} ${user.lastName || ''}`} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Registration / ID</label>
+                      <input className="form-input" style={{ width: '100%', marginTop: '4px' }} defaultValue={user.regNo || user.userId || 'EG/2023/5456'} disabled />
                     </div>
                     <div>
                       <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>University Email</label>
@@ -696,135 +1142,82 @@ export default function Dashboard() {
           </main>
 
           {/* ================================================================
-              4. RIGHT WIDGET PANEL (Notifications & Calendar)
+              4. RIGHT WIDGET PANEL (Notifications & Calendar on Dashboard)
               ================================================================ */}
-          <aside className="right-panel">
-            {/* Notifications Widget */}
-            <div className="widget-box">
-              <div className="widget-header">
-                <h3 className="widget-title">Notifications</h3>
-                <button className="widget-more-btn" title="More options">
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
+          {activeNav === 'dashboard' && (
+            <aside className="right-panel">
+              {/* Notifications Widget */}
+              <div className="widget-box">
+                <div className="widget-header">
+                  <h3 className="widget-title">Live Notifications</h3>
+                  <button className="widget-more-btn" title="Refresh Notifications" onClick={fetchBackendData}>
+                    <RefreshCw size={14} />
+                  </button>
+                </div>
 
-              <div className="notifications-list">
-                {notifications.map((notif) => (
-                  <div key={notif.id} className="notif-card">
-                    <div className={`notif-icon-circle notif-${notif.type}`}>
-                      <Bell size={16} />
-                    </div>
-                    <div className="notif-content">
-                      <div className="notif-heading">{notif.title}</div>
-                      <div className="notif-desc">{notif.desc}</div>
-                      <div className="notif-time">{notif.time}</div>
-                    </div>
-                    <button
-                      className="notif-close-btn"
-                      onClick={() => handleDismissNotif(notif.id)}
-                      title="Dismiss"
-                    >
-                      <X size={14} />
-                    </button>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    No active alerts.
                   </div>
-                ))}
+                ) : (
+                  <div className="notifications-list">
+                    {notifications.map((notif) => (
+                      <div key={notif.id} className="notif-card">
+                        <div className={`notif-icon-circle notif-${notif.type || 'emerald'}`}>
+                          <Bell size={16} />
+                        </div>
+                        <div className="notif-content">
+                          <div className="notif-heading">{notif.title}</div>
+                          <div className="notif-desc">{notif.desc}</div>
+                          <div className="notif-time">{notif.time}</div>
+                        </div>
+                        <button
+                          className="notif-close-btn"
+                          onClick={() => handleDismissNotif(notif.id)}
+                          title="Dismiss"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
 
-            {/* Interactive Upcoming Lab Calendar Widget with Sliding Months & User Reminders */}
-            <LabCalendar activeLoans={activeLoans} user={user} />
-          </aside>
+              {/* Interactive Upcoming Lab Calendar Widget */}
+              <LabCalendar
+                activeLoans={borrows.map((b) => ({
+                  id: b._id || b.borrowId,
+                  title: b.componentName || b.componentSpec,
+                  project: b.project,
+                  dueText: b.allocatedTime || `in ${b.durationDays} days`,
+                  status: b.status === 'Approved' ? 'Due Soon' : b.status
+                }))}
+                user={user}
+              />
+            </aside>
+          )}
         </div>
       </div>
 
       {/* ====================================================================
-          5. MODALS (New Loan Request & Upcoming Lab View More)
+          5. MODALS: Redesigned New Borrow Modal & Admin Approval Modal
           ==================================================================== */}
-      {showNewLoanModal && (
-        <div className="modal-overlay" onClick={() => setShowNewLoanModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">New Equipment Loan</h3>
-              <button
-                className="modal-close-btn"
-                onClick={() => setShowNewLoanModal(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
+      <NewBorrowModal
+        isOpen={showNewBorrowModal}
+        onClose={() => setShowNewBorrowModal(false)}
+        dbComponents={dbComponents}
+        currentUser={user}
+        onSuccess={fetchBackendData}
+      />
 
-            <form onSubmit={handleCreateLoan}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Equipment / Component Name</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input"
-                    value={loanForm.componentName}
-                    onChange={(e) => setLoanForm({ ...loanForm, componentName: e.target.value })}
-                    placeholder="e.g. Rigol DS1054Z, ESP32 DevKit, IC 74HC04"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Project / Lab Session</label>
-                  <select
-                    className="form-select"
-                    value={loanForm.project}
-                    onChange={(e) => setLoanForm({ ...loanForm, project: e.target.value })}
-                  >
-                    <option value="Project 1">Project 1 (Robotics Bench)</option>
-                    <option value="Project 2">Project 2 (IoT Wireless)</option>
-                    <option value="Project 3">Project 3 (Embedded Control)</option>
-                    <option value="Personal Study">General Lab Study</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select
-                    className="form-select"
-                    value={loanForm.category}
-                    onChange={(e) => setLoanForm({ ...loanForm, category: e.target.value })}
-                  >
-                    <option value="ICs">Integrated Circuits (DIP/SMD)</option>
-                    <option value="Microcontrollers">Microcontroller Boards</option>
-                    <option value="Sensors">Sensors & Modules</option>
-                    <option value="DevBoards">Development Kits</option>
-                    <option value="Equipment">Test & Measurement Gear</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Loan Duration (Days)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="14"
-                    className="form-input"
-                    value={loanForm.durationDays}
-                    onChange={(e) => setLoanForm({ ...loanForm, durationDays: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowNewLoanModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-submit">
-                  Confirm Loan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <BorrowApprovalModal
+        isOpen={approvalModal.isOpen}
+        borrow={approvalModal.borrow}
+        mode={approvalModal.mode}
+        onClose={() => setApprovalModal({ isOpen: false, borrow: null, mode: 'APPROVE' })}
+        onSuccess={fetchBackendData}
+      />
     </div>
   );
 }

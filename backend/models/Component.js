@@ -73,6 +73,10 @@ const componentSchema = new mongoose.Schema(
     description: {
       type: String,
       trim: true
+    },
+    imageUrl: {
+      type: String,
+      default: ''
     }
   },
   { timestamps: true }

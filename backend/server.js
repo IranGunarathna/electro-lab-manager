@@ -16,8 +16,14 @@ const app = express();
 // intermediate process handles that run on every HTTP
 
 
+const path = require('path');
+
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static uploaded assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // Routes
@@ -53,4 +59,8 @@ const itemRoutes = require('./routes/itemRoutes');
 app.use('/api/items', itemRoutes);
 
 const labSessionRoutes = require('./routes/labSessionRoutes');
-app.use('/api/lab-sessions', labSessionRoutes);
+app.use('/api/lab-sessions', labSessionRoutes);
+
+const borrowRoutes = require('./routes/borrowRoutes');
+app.use('/api/borrows', borrowRoutes);
+

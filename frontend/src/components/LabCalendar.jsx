@@ -574,12 +574,12 @@ export default function LabCalendar({ activeLoans = [], user = {} }) {
                       {cat === 'all'
                         ? 'All'
                         : cat === 'lab'
-                        ? '🔬 Lab Sessions'
+                        ? 'Lab Sessions'
                         : cat === 'loan'
-                        ? '⚡ Equipment Loans'
+                        ? 'Equipment Loans'
                         : cat === 'project'
-                        ? '📂 Projects'
-                        : '📌 Personal'}
+                        ? 'Projects'
+                        : 'Personal'}
                     </button>
                   ))}
                 </div>
@@ -690,10 +690,10 @@ export default function LabCalendar({ activeLoans = [], user = {} }) {
                           setNewReminder({ ...newReminder, category: e.target.value })
                         }
                       >
-                        <option value="lab">🔬 Lab Session</option>
-                        <option value="loan">⚡ Equipment Return Due</option>
-                        <option value="project">📂 Project Evaluation</option>
-                        <option value="personal">📌 Personal Reminder</option>
+                        <option value="lab">Lab Session</option>
+                        <option value="loan">Equipment Return Due</option>
+                        <option value="project">Project Evaluation</option>
+                        <option value="personal">Personal Reminder</option>
                       </select>
                     </div>
 

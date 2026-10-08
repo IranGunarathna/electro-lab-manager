@@ -386,7 +386,7 @@ export default function Landing() {
         </div>
 
         <div className="ticker-single-announcement">
-          <span>⚡ 12 Lab Stations Open Now across DEIE &middot; Real-time workbench reservation &amp; equipment counter operational</span>
+          <span>12 Lab Stations Open Now across DEIE &middot; Real-time workbench reservation &amp; equipment counter operational</span>
         </div>
       </div>
 

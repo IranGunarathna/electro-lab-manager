@@ -11,7 +11,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('userInfo');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        if (parsed.token) {
+          localStorage.setItem('token', parsed.token);
+        }
+      } catch (e) {
+        console.warn('Error parsing storedUser:', e);
+      }
     }
     setLoading(false);
   }, []);
@@ -19,12 +27,17 @@ export const AuthProvider = ({ children }) => {
   const login = async (uniEmail, password) => {
     const response = await api.post('/auth/login', { uniEmail, password });
     localStorage.setItem('userInfo', JSON.stringify(response.data));
+    if (response.data?.token) {
+      localStorage.setItem('token', response.data.token);
+    }
     setUser(response.data);
     return response.data;
   };
 
   const logout = () => {
     localStorage.removeItem('userInfo');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
