@@ -1195,7 +1195,7 @@ const practicalCurriculum = [
 
 const seedAll = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb+srv://jayanethgunarathna_db_user:ij8RLyqfHxl9GnFh@eleclabcomp.mg3xaxy.mongodb.net/?appName=ElecLAbComp';
+    const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/electro-lab';
     await mongoose.connect(mongoUri);
     console.log('MongoDB connected successfully.');
 

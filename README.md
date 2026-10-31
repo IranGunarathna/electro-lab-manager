@@ -9,7 +9,9 @@ LabSync is a web application designed for the Department of Electrical and Infor
 - Node.js (v18.x or higher)
 - npm (bundled with Node.js)
 - Git
-- MongoDB: **Not required** (a pre-configured cloud test database is already included in `.env.example`, so no account or local installation is needed)
+- MongoDB (Choose either option):
+  - **Option A (Recommended for local evaluation):** Local MongoDB Community Edition running on `mongodb://127.0.0.1:27017/electro-lab` (No account needed)
+  - **Option B:** Free MongoDB Atlas cloud cluster
 
 ## Setup Instructions
 
@@ -31,7 +33,7 @@ cd backend
 npm install
 ```
 
-Create your `.env` file by copying `.env.example`. The template already contains a pre-configured shared cloud test database, so no edits are needed:
+Create your `.env` file by copying `.env.example`:
 
 **On Windows (PowerShell):**
 ```powershell
@@ -43,7 +45,21 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-*(Optional: If you prefer to use your own personal database instead of the shared test database, you can open `.env` and replace `MONGO_URI` with your own connection string).*
+Open `.env` in a text editor and configure your database connection:
+
+```env
+PORT=5000
+
+# For Local MongoDB (Default):
+MONGO_URI=mongodb://127.0.0.1:27017/electro-lab
+
+# Or for MongoDB Atlas:
+# MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/electro-lab?retryWrites=true&w=majority
+
+JWT_SECRET=super_secret_electro_lab_key_123
+```
+
+*(Note: If you are using local MongoDB running on port 27017, the application will automatically connect to `mongodb://127.0.0.1:27017/electro-lab` even without setting `MONGO_URI`.)*
 
 ### 3. Seed Database
 
