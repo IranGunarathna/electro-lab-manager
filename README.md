@@ -10,7 +10,7 @@ LabSync is a web application designed for the Department of Electrical and Infor
 - npm (bundled with Node.js)
 - Git
 - MongoDB (Choose either option):
-  - **Option A (Recommended for local evaluation):** Local MongoDB Community Edition running on `mongodb://127.0.0.1:27017/electro-lab` (No account needed)
+  - **Option A (Testing and Evaluation):** Local MongoDB Community Edition running on `mongodb://127.0.0.1:27017/electro-lab` (No account needed)
   - **Option B:** Free MongoDB Atlas cloud cluster
 
 ## Setup Instructions
