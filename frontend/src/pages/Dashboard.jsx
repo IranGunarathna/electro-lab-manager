@@ -28,13 +28,15 @@ import {
   XCircle,
   PackageCheck,
   RefreshCw,
-  Info
+  Info,
+  KeyRound
 } from 'lucide-react';
 import LabCalendar from '../components/LabCalendar';
 import LabSessionsManager from '../components/LabSessionsManager';
 import NewBorrowModal from '../components/NewBorrowModal';
 import BorrowApprovalModal from '../components/BorrowApprovalModal';
 import AdminComponentModal from '../components/AdminComponentModal';
+import logoOscilloscope from '../assets/D · Oscilloscope@2x (1).png';
 import { getAuthToken } from '../api/axios';
 import './Dashboard.css';
 
@@ -124,6 +126,24 @@ export default function Dashboard() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  const handleAdminResetPassword = async (requestId, studentName) => {
+    if (!window.confirm(`Reset password for ${studentName} to the default "password123"?`)) return;
+    try {
+      const token = getAuthToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.put(
+        `http://localhost:5000/api/auth/password-reset-requests/${requestId}/resolve`,
+        { newPassword: 'password123' },
+        { headers }
+      );
+      alert(res.data.message || `Password for ${studentName} has been reset to "password123".`);
+      setNotifications((prev) => prev.filter((n) => n.resetRequestId !== requestId));
+      fetchBackendData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reset student password.');
+    }
+  };
+
   // Helper to determine component thumbnail
   const getComponentImage = (compName = '', spec = '', lab = '', item = null) => {
     // 1. Direct custom imageUrl on item or populated component
@@ -188,11 +208,14 @@ export default function Dashboard() {
         <div>
           {/* Logo & Brand Header */}
           <div className="sidebar-header">
-            <div className="sidebar-logo-icon">
-              <Cpu size={22} />
-            </div>
-            <div className="sidebar-logo-title">
-              Electronics Equipment<br />Management System
+            <img
+              src={logoOscilloscope}
+              alt="LabSync Logo"
+              className="sidebar-brand-logo"
+            />
+            <div className="sidebar-brand-text">
+              <span className="sidebar-brand-name">LabSync</span>
+              <span className="sidebar-brand-sub">Electronics Equipment Management System</span>
             </div>
           </div>
 
@@ -1095,6 +1118,31 @@ export default function Dashboard() {
                             <div className="notif-heading">{n.title}</div>
                             <div className="notif-desc">{n.desc}</div>
                             <div className="notif-time">{n.time}</div>
+                            {n.isPasswordReset && user.role === 'Admin' && (
+                              <div style={{ marginTop: '8px' }}>
+                                <button
+                                  type="button"
+                                  style={{
+                                    padding: '5px 13px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    backgroundColor: 'var(--primary-navy, #0f224a)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius-pill, 9999px)',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    boxShadow: '0 2px 6px rgba(15, 34, 74, 0.2)'
+                                  }}
+                                  onClick={() => handleAdminResetPassword(n.resetRequestId, n.studentName)}
+                                >
+                                  <KeyRound size={12} />
+                                  <span>Reset to Default (password123)</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <button
                             className="notif-close-btn"
@@ -1170,6 +1218,31 @@ export default function Dashboard() {
                           <div className="notif-heading">{notif.title}</div>
                           <div className="notif-desc">{notif.desc}</div>
                           <div className="notif-time">{notif.time}</div>
+                          {notif.isPasswordReset && user.role === 'Admin' && (
+                            <div style={{ marginTop: '8px' }}>
+                              <button
+                                type="button"
+                                style={{
+                                  padding: '5px 12px',
+                                  fontSize: '11.5px',
+                                  fontWeight: '600',
+                                  backgroundColor: 'var(--primary-navy, #0f224a)',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: 'var(--radius-pill, 9999px)',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  boxShadow: '0 2px 6px rgba(15, 34, 74, 0.2)'
+                                }}
+                                onClick={() => handleAdminResetPassword(notif.resetRequestId, notif.studentName)}
+                              >
+                                <KeyRound size={12} />
+                                <span>Reset Password</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <button
                           className="notif-close-btn"

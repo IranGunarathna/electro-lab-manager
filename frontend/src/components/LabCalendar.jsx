@@ -22,88 +22,32 @@ export const formatDateKey = (date) => {
   return `${y}-${m}-${d}`;
 };
 
-// Initial default lab reminders seed
-const DEFAULT_REMINDERS = [
-  {
-    id: 'rem-1',
-    title: 'EE4207 Embedded Systems Lab 04',
-    date: '2026-10-10',
-    time: '02:00 PM - 05:00 PM',
-    location: 'EE Lab Room 204 (Bench 01-12)',
-    category: 'lab',
-    typeLabel: 'Lab Session',
-    priority: 'high',
-    notes: 'Bring STM32 boards and breadboards. Pre-lab simulation report due.'
-  },
-  {
-    id: 'rem-2',
-    title: 'Return Rigol DS1054Z Oscilloscope',
-    date: '2026-10-13',
-    time: 'Before 04:30 PM',
-    location: 'Equipment Store / Counter A',
-    category: 'loan',
-    typeLabel: 'Equipment Due',
-    priority: 'urgent',
-    notes: 'Return 50MHz probes, ground clips, and power adapter in carrier box.'
-  },
-  {
-    id: 'rem-3',
-    title: 'DEIE Capstone Project Review 1',
-    date: '2026-10-18',
-    time: '09:00 AM - 12:00 PM',
-    location: 'Conference Room DEIE-02',
-    category: 'project',
-    typeLabel: 'Project Review',
-    priority: 'high',
-    notes: 'Equipment return required prior to milestone evaluation.'
-  },
-  {
-    id: 'rem-4',
-    title: 'ESP32 IoT Sensor Prototype Milestone',
-    date: '2026-10-22',
-    time: '01:30 PM - 03:30 PM',
-    location: 'Hardware Prototyping Lab',
-    category: 'project',
-    typeLabel: 'Milestone',
-    priority: 'medium',
-    notes: 'Demonstrate MQTT telemetry streaming to lab broker.'
-  },
-  {
-    id: 'rem-5',
-    title: 'Robotics Bench Component Re-check',
-    date: '2026-10-25',
-    time: '11:00 AM - 01:00 PM',
-    location: 'Robotics Suite R1',
-    category: 'lab',
-    typeLabel: 'Lab Session',
-    priority: 'medium',
-    notes: 'Weekly motor driver and battery pack health check.'
-  }
-];
-
 export default function LabCalendar({ activeLoans = [], user = {} }) {
   // Current view date (year & month displayed in calendar)
-  // Default to October 2026 to match project data context, but user can freely slide to any month/year
-  const [viewDate, setViewDate] = useState(() => new Date(2026, 9, 1));
+  const [viewDate, setViewDate] = useState(() => new Date());
   
   // Selected date for day view inspection
-  const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 9, 10));
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
 
   // Slide direction for smooth CSS transition ('slide-left' or 'slide-right')
   const [slideDirection, setSlideDirection] = useState('slide-right');
   const [animateKey, setAnimateKey] = useState(0);
 
-  // Reminders state with localStorage persistence
+  // Reminders state with localStorage persistence - empty by default (no hardcoded seeds)
   const [reminders, setReminders] = useState(() => {
     try {
       const saved = localStorage.getItem('electro_lab_reminders');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Purge legacy hardcoded default seeds if present in browser storage
+          return parsed.filter((r) => !['rem-1', 'rem-2', 'rem-3', 'rem-4', 'rem-5'].includes(r.id));
+        }
       }
     } catch (e) {
       console.warn('Could not read reminders from localStorage', e);
     }
-    return DEFAULT_REMINDERS;
+    return [];
   });
 
   // Modal controls
@@ -138,18 +82,16 @@ export default function LabCalendar({ activeLoans = [], user = {} }) {
     // Automatically map active loans as return deadline reminders
     if (activeLoans && activeLoans.length > 0) {
       activeLoans.forEach((loan) => {
-        // Only add if not duplicate
         const loanRemId = `loan-auto-${loan.id}`;
         if (!list.some((r) => r.id === loanRemId)) {
-          // If dueText is like "in 3 days" or similar, map to a reasonable date
-          let dueDay = 10;
+          let targetDate = new Date();
           if (typeof loan.dueText === 'string') {
             const match = loan.dueText.match(/\d+/);
             if (match) {
-              dueDay = Math.min(28, 10 + parseInt(match[0], 10));
+              targetDate.setDate(targetDate.getDate() + parseInt(match[0], 10));
             }
           }
-          const loanDate = `2026-10-${String(dueDay).padStart(2, '0')}`;
+          const loanDate = formatDateKey(targetDate);
 
           list.push({
             id: loanRemId,

@@ -173,18 +173,7 @@ const seedStudents = async () => {
       });
     });
 
-    // Also preserve or create the convenient test student Akila Jayan
-    studentDocs.push({
-      userId: 'STU001',
-      regNo: 'EG/2023/5000',
-      firstName: 'Akila',
-      lastName: 'Jayan',
-      uniEmail: 'akila@eng.ruh.ac.lk',
-      password: 'password123',
-      dept: 'DEIE',
-      semester: 3,
-      role: 'Student'
-    });
+
 
     console.log(`Processing ${studentDocs.length} student records...`);
     let createdCount = 0;

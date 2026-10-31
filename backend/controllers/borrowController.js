@@ -114,11 +114,13 @@ exports.getAllBorrows = async (req, res) => {
 
     // Calculate status breakdown stats
     const allRecords = await Borrow.find({});
+    const now = new Date();
     const stats = {
       total: allRecords.length,
       pending: allRecords.filter((b) => b.status === 'Pending').length,
       approved: allRecords.filter((b) => b.status === 'Approved').length,
-      active: allRecords.filter((b) => b.status === 'Active').length,
+      active: allRecords.filter((b) => b.status === 'Active' && (!b.dueDate || new Date(b.dueDate) >= now)).length,
+      overdue: allRecords.filter((b) => b.status === 'Active' && b.dueDate && new Date(b.dueDate) < now).length,
       rejected: allRecords.filter((b) => b.status === 'Rejected').length,
       returned: allRecords.filter((b) => b.status === 'Returned').length
     };
@@ -298,12 +300,30 @@ exports.getBorrowNotifications = async (req, res) => {
     let notifications = [];
 
     if (userRole === 'Admin' || userRole === 'LabAssistant') {
-      // Pending requests waiting for admin action
+      // 1. Pending password reset requests waiting for admin action
+      const pendingResets = await PasswordResetRequest.find({ status: 'Pending' })
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+      const resetNotifs = pendingResets.map((r) => ({
+        id: `reset-req-${r._id}`,
+        type: 'amber',
+        title: 'Password Reset Requested',
+        desc: `${r.studentName} (${r.studentRegNo}) requested a password reset. Reason: "${r.reason}".`,
+        time: r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+        resetRequestId: r._id,
+        studentRegNo: r.studentRegNo,
+        studentName: r.studentName,
+        isPasswordReset: true,
+        status: r.status
+      }));
+
+      // 2. Pending borrow requests waiting for admin action
       const pendingBorrows = await Borrow.find({ status: 'Pending' })
         .sort({ createdAt: -1 })
         .limit(10);
 
-      notifications = pendingBorrows.map((b) => ({
+      const borrowNotifs = pendingBorrows.map((b) => ({
         id: `admin-notif-${b._id}`,
         type: 'amber',
         title: 'New Borrow Request Pending',
@@ -312,6 +332,8 @@ exports.getBorrowNotifications = async (req, res) => {
         borrowId: b._id,
         status: b.status
       }));
+
+      notifications = [...resetNotifs, ...borrowNotifs];
     } else {
       // For student: alerts on approved, rejected, or active requests
       const studentReg = req.user.regNo || req.user.userId;

@@ -31,15 +31,6 @@ const seedUsers = async () => {
         password: 'password123',
         dept: 'DEIE',
         role: 'LabAssistant'
-      },
-      {
-        userId: 'STU001',
-        firstName: 'Akila',
-        lastName: 'Jayan',
-        uniEmail: 'akila@eng.ruh.ac.lk',
-        password: 'password123',
-        dept: 'DEIE',
-        role: 'Student'
       }
     ];
 

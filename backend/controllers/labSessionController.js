@@ -3,6 +3,7 @@ const LabSession = require('../models/LabSession');
 const Component = require('../models/Component');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const practicalCurriculum = require('../data/curriculumData');
 
 // @desc    Get all lab sessions (with optional query filters)
 // @route   GET /api/lab-sessions
@@ -15,11 +16,17 @@ exports.getAllLabSessions = async (req, res) => {
     if (courseCode) filter.courseCode = courseCode.toUpperCase();
     if (status) filter.status = status;
     if (labName) filter.labName = labName;
-    if (studentEmail) filter['studentDetails.uniEmail'] = studentEmail;
+    if (studentEmail) {
+      filter.$or = [
+        { 'studentDetails.uniEmail': studentEmail },
+        { 'students.uniEmail': studentEmail }
+      ];
+    }
 
     const sessions = await LabSession.find(filter)
       .populate('assignedStudent', 'firstName lastName uniEmail userId role')
-      .sort({ scheduledDate: 1 });
+      .populate('students.studentId', 'firstName lastName uniEmail userId role regNo')
+      .sort({ scheduledDate: 1, worktable: 1 });
 
     res.status(200).json(sessions);
   } catch (err) {
@@ -28,7 +35,7 @@ exports.getAllLabSessions = async (req, res) => {
   }
 };
 
-// @desc    Get lab sessions assigned to the logged-in student
+// @desc    Get lab sessions assigned to the logged-in student (either individual or group member)
 // @route   GET /api/lab-sessions/student/:identifier
 exports.getStudentLabSessions = async (req, res) => {
   try {
@@ -46,16 +53,25 @@ exports.getStudentLabSessions = async (req, res) => {
 
     const conditions = [
       { 'studentDetails.uniEmail': cleanId.toLowerCase() },
-      { 'studentDetails.userId': cleanId }
+      { 'studentDetails.userId': cleanId },
+      { 'students.uniEmail': cleanId.toLowerCase() },
+      { 'students.userId': cleanId },
+      { 'students.regNo': cleanId }
     ];
 
     if (student) {
       conditions.push({ assignedStudent: student._id });
       conditions.push({ 'studentDetails.uniEmail': student.uniEmail });
       conditions.push({ 'studentDetails.userId': student.userId });
+      conditions.push({ 'students.studentId': student._id });
+      conditions.push({ 'students.uniEmail': student.uniEmail });
+      conditions.push({ 'students.userId': student.userId });
+      conditions.push({ 'students.regNo': student.regNo });
     }
 
     const sessions = await LabSession.find({ $or: conditions })
+      .populate('assignedStudent', 'firstName lastName uniEmail userId regNo')
+      .populate('students.studentId', 'firstName lastName uniEmail userId regNo')
       .sort({ scheduledDate: 1 });
 
     res.status(200).json(sessions);
@@ -84,7 +100,300 @@ exports.getStudentsList = async (req, res) => {
   }
 };
 
-// @desc    Admin allocates a lab practical to a student at a specific worktable & date/time
+// @desc    Get auto-distributed student groups for a semester (4 students per group, remaining in last group)
+// @route   GET /api/lab-sessions/groups
+exports.getStudentGroups = async (req, res) => {
+  try {
+    const { semester = 3, groupSize = 4 } = req.query;
+    const size = Math.max(1, Number(groupSize) || 4);
+
+    const students = await User.find({
+      role: 'Student',
+      semester: Number(semester)
+    })
+      .select('firstName lastName uniEmail userId regNo semester dept')
+      .sort({ regNo: 1 });
+
+    const totalStudents = students.length;
+    const groups = [];
+
+    for (let i = 0; i < totalStudents; i += size) {
+      const groupStudents = students.slice(i, i + size);
+      const groupNum = Math.floor(i / size) + 1;
+      groups.push({
+        groupNumber: groupNum,
+        groupName: `Group ${String(groupNum).padStart(2, '0')}`,
+        suggestedWorktable: `Worktable ${groupNum}`,
+        studentCount: groupStudents.length,
+        students: groupStudents.map(s => ({
+          studentId: s._id,
+          userId: s.userId,
+          regNo: s.regNo || s.userId,
+          name: `${s.firstName} ${s.lastName}`,
+          uniEmail: s.uniEmail
+        }))
+      });
+    }
+
+    res.status(200).json({
+      semester: Number(semester),
+      totalStudents,
+      groupSize: size,
+      totalGroups: groups.length,
+      groups
+    });
+  } catch (err) {
+    console.error('Error getting student groups:', err);
+    res.status(500).json({ message: 'Failed to generate student groups', error: err.message });
+  }
+};
+
+// @desc    Admin allocates a practical to an entire student group at a worktable
+// @route   POST /api/lab-sessions/allocate-group
+exports.allocateGroupLabSession = async (req, res) => {
+  try {
+    const {
+      semester,
+      courseCode,
+      labNumber,
+      groupNumber,
+      worktable,
+      scheduledDate,
+      timeSlot,
+      studentIds
+    } = req.body;
+
+    const template = practicalCurriculum.find(
+      p => p.courseCode.toUpperCase() === courseCode.toUpperCase() && p.labNumber === Number(labNumber)
+    );
+
+    if (!template) {
+      return res.status(404).json({ message: 'Lab practical not found in curriculum' });
+    }
+
+    let groupStudents = [];
+
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      const users = await User.find({
+        $or: [
+          { userId: { $in: studentIds } },
+          { regNo: { $in: studentIds } },
+          { _id: { $in: studentIds.filter(id => id.match(/^[0-9a-fA-F]{24}$/)) } }
+        ]
+      }).sort({ regNo: 1 });
+
+      groupStudents = users.map(s => ({
+        studentId: s._id,
+        userId: s.userId,
+        regNo: s.regNo || s.userId,
+        name: `${s.firstName} ${s.lastName}`,
+        uniEmail: s.uniEmail
+      }));
+    } else {
+      // Auto-fetch group by groupNumber (4 students per group)
+      const allSemStudents = await User.find({
+        role: 'Student',
+        semester: Number(semester || template.semester)
+      }).sort({ regNo: 1 });
+
+      const groupIdx = (Number(groupNumber) || 1) - 1;
+      const sliced = allSemStudents.slice(groupIdx * 4, groupIdx * 4 + 4);
+      groupStudents = sliced.map(s => ({
+        studentId: s._id,
+        userId: s.userId,
+        regNo: s.regNo || s.userId,
+        name: `${s.firstName} ${s.lastName}`,
+        uniEmail: s.uniEmail
+      }));
+    }
+
+    if (groupStudents.length === 0) {
+      return res.status(400).json({ message: 'No students found for this group' });
+    }
+
+    const assignedWorktable = worktable || `Worktable ${groupNumber || 1}`;
+    const sessId = `SESS-${template.courseCode}-L${template.labNumber}-GRP${groupNumber || 1}`;
+
+    const sessionPayload = {
+      sessionId: sessId,
+      courseCode: template.courseCode,
+      courseName: template.courseName,
+      semester: template.semester,
+      labNumber: template.labNumber,
+      title: template.title,
+      labName: template.labName,
+      worktable: assignedWorktable,
+      scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+      timeSlot: timeSlot || '09:00 - 12:00',
+      groupNumber: Number(groupNumber) || 1,
+      groupName: `Group ${String(groupNumber || 1).padStart(2, '0')}`,
+      students: groupStudents,
+      assignedStudent: groupStudents[0].studentId,
+      studentDetails: {
+        userId: groupStudents[0].userId,
+        name: groupStudents[0].name,
+        uniEmail: groupStudents[0].uniEmail
+      },
+      batch: `E/23/EE-Sem${template.semester}`,
+      requiredEquipment: template.requiredEquipment.map(eq => ({
+        componentId: eq.componentId,
+        name: eq.name,
+        spec: eq.spec,
+        quantityRequired: eq.quantityRequired,
+        isConsumable: eq.isConsumable,
+        status: 'Allocated'
+      })),
+      status: 'Scheduled'
+    };
+
+    let session = await LabSession.findOne({
+      courseCode: template.courseCode,
+      labNumber: template.labNumber,
+      groupNumber: Number(groupNumber)
+    });
+
+    if (session) {
+      Object.assign(session, sessionPayload);
+      await session.save();
+    } else {
+      session = await LabSession.create(sessionPayload);
+    }
+
+    res.status(201).json({
+      message: `Successfully allocated Group ${groupNumber} (${groupStudents.length} students) to ${assignedWorktable} for ${template.courseCode} Lab ${template.labNumber}. All ${groupStudents.length} students have received their allocation!`,
+      session
+    });
+  } catch (err) {
+    console.error('Error allocating group session:', err);
+    res.status(500).json({ message: 'Failed to allocate group session', error: err.message });
+  }
+};
+
+// @desc    Admin batch-allocates all groups in a semester across worktables in one click
+// @route   POST /api/lab-sessions/allocate-batch-groups
+exports.batchAllocateGroups = async (req, res) => {
+  try {
+    const {
+      semester,
+      courseCode,
+      labNumber,
+      scheduledDate,
+      timeSlot,
+      groupSize = 4
+    } = req.body;
+
+    const template = practicalCurriculum.find(
+      p => p.courseCode.toUpperCase() === courseCode.toUpperCase() && p.labNumber === Number(labNumber)
+    );
+
+    if (!template) {
+      return res.status(404).json({ message: 'Lab practical not found in curriculum' });
+    }
+
+    const students = await User.find({
+      role: 'Student',
+      semester: Number(semester || template.semester)
+    }).sort({ regNo: 1 });
+
+    if (students.length === 0) {
+      return res.status(404).json({ message: `No registered students found for Semester ${semester}` });
+    }
+
+    const size = Math.max(1, Number(groupSize) || 4);
+    const createdSessions = [];
+
+    let groupIndex = 0;
+    for (let i = 0; i < students.length; i += size) {
+      groupIndex++;
+      const groupStudents = students.slice(i, i + size);
+      const groupNum = groupIndex;
+      const worktable = `Worktable ${groupNum}`;
+      const sessId = `SESS-${template.courseCode}-L${template.labNumber}-GRP${groupNum}`;
+
+      const mappedStudents = groupStudents.map(s => ({
+        studentId: s._id,
+        userId: s.userId,
+        regNo: s.regNo || s.userId,
+        name: `${s.firstName} ${s.lastName}`,
+        uniEmail: s.uniEmail
+      }));
+
+      const sessionPayload = {
+        sessionId: sessId,
+        courseCode: template.courseCode,
+        courseName: template.courseName,
+        semester: template.semester,
+        labNumber: template.labNumber,
+        title: template.title,
+        labName: template.labName,
+        worktable: worktable,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+        timeSlot: timeSlot || '09:00 - 12:00',
+        groupNumber: groupNum,
+        groupName: `Group ${String(groupNum).padStart(2, '0')}`,
+        students: mappedStudents,
+        assignedStudent: mappedStudents[0].studentId,
+        studentDetails: {
+          userId: mappedStudents[0].userId,
+          name: mappedStudents[0].name,
+          uniEmail: mappedStudents[0].uniEmail
+        },
+        batch: `E/23/EE-Sem${template.semester}`,
+        requiredEquipment: template.requiredEquipment.map(eq => ({
+          componentId: eq.componentId,
+          name: eq.name,
+          spec: eq.spec,
+          quantityRequired: eq.quantityRequired,
+          isConsumable: eq.isConsumable,
+          status: 'Allocated'
+        })),
+        status: 'Scheduled'
+      };
+
+      let session = await LabSession.findOne({
+        courseCode: template.courseCode,
+        labNumber: template.labNumber,
+        groupNumber: groupNum
+      });
+
+      if (session) {
+        Object.assign(session, sessionPayload);
+        await session.save();
+        createdSessions.push(session);
+      } else {
+        session = await LabSession.create(sessionPayload);
+        createdSessions.push(session);
+      }
+    }
+
+    res.status(201).json({
+      message: `Successfully allocated all ${createdSessions.length} student groups (${students.length} students) across Worktables 1–${createdSessions.length} for ${template.courseCode} Lab ${template.labNumber}!`,
+      count: createdSessions.length,
+      totalStudents: students.length,
+      sessions: createdSessions
+    });
+  } catch (err) {
+    console.error('Error batch-allocating groups:', err);
+    res.status(500).json({ message: 'Failed to batch-allocate student groups', error: err.message });
+  }
+};
+
+// @desc    Admin deletes an allocated lab session
+// @route   DELETE /api/lab-sessions/:id
+exports.deleteLabSession = async (req, res) => {
+  try {
+    const session = await LabSession.findByIdAndDelete(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Lab session not found' });
+    }
+    res.status(200).json({ message: `Allocation for ${session.worktable} (${session.courseCode}) deleted successfully.` });
+  } catch (err) {
+    console.error('Error deleting session:', err);
+    res.status(500).json({ message: 'Failed to delete lab session', error: err.message });
+  }
+};
+
+// @desc    Admin allocates a lab practical to an individual student at a specific worktable & date/time
 // @route   POST /api/lab-sessions/allocate
 exports.allocateStudentLabSession = async (req, res) => {
   try {
@@ -109,32 +418,40 @@ exports.allocateStudentLabSession = async (req, res) => {
       return res.status(404).json({ message: 'Student not found in database' });
     }
 
-    // Find template/reference practical from curriculum
-    const templateSession = await LabSession.findOne({
-      courseCode: courseCode.toUpperCase(),
-      labNumber: Number(labNumber)
-    });
+    // Find template practical from curriculum data
+    const templateSession = practicalCurriculum.find(
+      p => p.courseCode.toUpperCase() === courseCode.toUpperCase() && p.labNumber === Number(labNumber)
+    );
 
     if (!templateSession) {
-      return res.status(404).json({ message: 'Lab practical template not found' });
+      return res.status(404).json({ message: 'Lab practical not found in curriculum' });
     }
 
     // Check if student already has this session allocated, update it or create new
     let session = await LabSession.findOne({
       assignedStudent: student._id,
-      courseCode: courseCode.toUpperCase(),
-      labNumber: Number(labNumber)
+      courseCode: templateSession.courseCode,
+      labNumber: templateSession.labNumber
     });
+
+    const studentObj = {
+      studentId: student._id,
+      userId: student.userId,
+      regNo: student.regNo || student.userId,
+      name: `${student.firstName} ${student.lastName}`,
+      uniEmail: student.uniEmail
+    };
 
     if (session) {
       session.worktable = worktable || 'Worktable 1';
       session.scheduledDate = scheduledDate ? new Date(scheduledDate) : new Date();
       session.timeSlot = timeSlot || '09:00 - 12:00';
+      session.students = [studentObj];
       session.status = 'Scheduled';
       await session.save();
     } else {
       session = await LabSession.create({
-        sessionId: `SESS-${courseCode}-L${labNumber}-${student.regNo.replace(/[^a-zA-Z0-9]/g, '')}`,
+        sessionId: `SESS-${courseCode}-L${labNumber}-${(student.regNo || student.userId).replace(/[^a-zA-Z0-9]/g, '')}`,
         courseCode: templateSession.courseCode,
         courseName: templateSession.courseName,
         semester: templateSession.semester,
@@ -145,6 +462,7 @@ exports.allocateStudentLabSession = async (req, res) => {
         scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
         timeSlot: timeSlot || '09:00 - 12:00',
         assignedStudent: student._id,
+        students: [studentObj],
         studentDetails: {
           userId: student.userId,
           name: `${student.firstName} ${student.lastName}`,

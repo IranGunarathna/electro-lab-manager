@@ -72,6 +72,25 @@ const labSessionSchema = new mongoose.Schema(
       name: { type: String },
       uniEmail: { type: String }
     },
+    groupNumber: {
+      type: Number
+    },
+    groupName: {
+      type: String,
+      default: ''
+    },
+    students: [
+      {
+        studentId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        userId: { type: String },
+        regNo: { type: String },
+        name: { type: String },
+        uniEmail: { type: String }
+      }
+    ],
     batch: {
       type: String,
       default: 'E/21/EE'

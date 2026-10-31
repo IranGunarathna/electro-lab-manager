@@ -778,25 +778,26 @@
 
 .lab-card-title {
   font-family: var(--font-heading);
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.35px;
   line-height: 1.3;
-  margin-bottom: 22px;
-  min-height: 52px;
+  margin-bottom: 20px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 }
 
 /* Circular Featured Visual (Matching user reference) */
 .lab-circle-container {
-  width: 175px;
-  height: 175px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
   overflow: hidden;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
   box-shadow: 0 8px 22px -4px rgba(15, 34, 74, 0.16);
   border: 4px solid #ffffff;
   background-color: #0f172a;
@@ -815,23 +816,28 @@
   transform: scale(1.06);
 }
 
-/* Stacked Row Items (Directly matching user image) */
+/* Stacked Row Items (Aligned to exact horizontal line across all cards) */
 .lab-stacked-rows {
   width: 100%;
   display: flex;
   flex-direction: column;
-  margin-top: auto;
+  margin-top: 0;
 }
 
 .lab-row-item {
   background-color: var(--bg-surface-subtle);
   border-top: 1px solid var(--border-divider);
-  padding: 13px 24px;
-  font-size: 14.5px;
+  padding: 0 20px;
+  font-size: 13.5px;
   font-weight: 500;
   color: #1e293b;
   text-align: left;
   transition: background-color var(--transition-fast);
+  height: 54px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  line-height: 1.35;
 }
 
 .lab-row-item:hover {
@@ -839,16 +845,27 @@
   color: var(--primary-navy);
 }
 
+.lab-row-item-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
 /* Bottom Card Action / Location Bar */
 .lab-card-bottom {
   width: 100%;
-  padding: 14px 22px;
+  height: 56px;
+  padding: 0 22px;
   background-color: #ffffff;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
   box-sizing: border-box;
+  margin-top: auto;
 }
 
 .lab-meta-status {
@@ -906,25 +923,343 @@
   background-color: var(--bg-surface);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 650px;
-  box-shadow: var(--shadow-modal);
-  border: 1px solid var(--border-subtle);
+  max-width: 630px;
+  max-height: min(85vh, 620px);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  border: none;
+  outline: none;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-card-lg .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-card-lg .modal-footer {
+  padding: 10px 22px;
+  background-color: var(--bg-surface-subtle);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Bambu Lab A1 Fundraiser Modal & Product Showcase
+   ========================================================================== */
+.modal-card-fundraiser {
+  background-color: var(--bg-surface);
+  border-radius: 16px;
+  width: 95%;
+  max-width: 820px;
+  max-height: min(85vh, 560px);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  border: none;
+  outline: none;
+  overflow: hidden;
+  animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.fundraiser-header {
+  background-color: #0f224a;
+  color: #ffffff;
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: none;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.fundraiser-header-title {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.fundraiser-header-sub {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+  color: #94a3b8;
+}
+
+.fundraiser-modal-body {
+  padding: 14px 22px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+  align-items: center;
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (max-width: 820px) {
+  .fundraiser-modal-body {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px 18px;
+  }
+}
+
+/* Photo Column */
+.fundraiser-photo-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.product-image-container {
+  background-color: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: 220px;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+.product-single-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.25s ease;
+}
+
+.product-single-photo:hover {
+  transform: scale(1.02);
+}
+
+/* Info Column */
+.fundraiser-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-detail-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.product-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.product-price-label {
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.product-price-primary {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d9383a;
+  letter-spacing: -0.2px;
+}
+
+/* Campaign Progress Card */
+.fundraiser-campaign-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 9px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campaign-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.stat-amounts {
+  font-size: 14.5px;
+  color: #0f172a;
+}
+
+.stat-target {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.campaign-percent-badge {
+  background-color: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.campaign-progress-bar-bg {
+  width: 100%;
+  height: 9px;
+  background-color: #e2e8f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.campaign-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0ea5e9, #10b981);
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.campaign-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.campaign-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Direct Bank Account Details Card */
+.bank-account-card {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+  padding: 9px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bank-account-card-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.bank-account-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bank-field-row {
+  display: flex;
+  font-size: 11.5px;
+  gap: 6px;
+}
+
+.bank-field-label {
+  color: #64748b;
+  min-width: 80px;
+}
+
+.bank-field-value {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.bank-account-num-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  margin: 1px 0;
+}
+
+.bank-acc-label {
+  display: block;
+  font-size: 9.5px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.bank-acc-digits {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.btn-copy-acc {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-copy-acc:hover {
+  background-color: #e2e8f0;
 }
 
 .modal-header-accent {
   background-color: var(--primary-navy);
   color: #ffffff;
-  padding: 24px 28px;
+  padding: 13px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .modal-header-accent .modal-title {
   color: #ffffff;
-  font-size: 20px;
+  font-size: 17px;
 }
 
 .modal-header-accent .modal-close-btn {

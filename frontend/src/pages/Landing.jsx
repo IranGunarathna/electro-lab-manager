@@ -4,6 +4,7 @@ import axios from 'axios';
 import logoOscilloscope from '../assets/D · Oscilloscope@2x (1).png';
 import logoDeie from '../assets/Deie.png';
 import rigolDs9604 from '../assets/rigol-ds9604.jpg';
+import bambuA1UserImg from '../assets/bambu_a1_user.png';
 import {
   Zap,
   SunMedium,
@@ -29,7 +30,12 @@ import {
   PhoneCall,
   DollarSign,
   Target,
-  LogIn
+  LogIn,
+  Copy,
+  Check,
+  Building,
+  CreditCard,
+  Users
 } from 'lucide-react';
 import './Landing.css';
 
@@ -40,6 +46,15 @@ export default function Landing() {
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Bambu Lab A1 Fundraiser State
+  const [copiedBankNo, setCopiedBankNo] = useState(false);
+
+  const handleCopyAccountNo = () => {
+    navigator.clipboard.writeText('086-1001-2004-5678');
+    setCopiedBankNo(true);
+    setTimeout(() => setCopiedBankNo(false), 2000);
+  };
 
   // Live database components
   const [dbComponents, setDbComponents] = useState([]);
@@ -237,7 +252,7 @@ export default function Landing() {
         'Precision FDM Rapid 3D Printers',
         'Autonomous Robotics & Drone Arena',
         'Battery Pack Spot-Welding Systems',
-        'Capstone Hardware Project Workbenches'
+        'Capstone Hardware Project Worktables'
       ],
       openStations: 20,
       totalStations: 25,
@@ -260,8 +275,12 @@ export default function Landing() {
         return lab;
       }
 
-      // First 4 featured items directly from MongoDB database
-      const dynamicItems = matching.slice(0, 4).map((c) => c.name);
+      // First 4 featured items directly from MongoDB database (fallback-padded to guarantee exactly 4 rows)
+      let dynamicItems = matching.slice(0, 4).map((c) => c.name);
+      if (dynamicItems.length < 4) {
+        const fallbacks = lab.items.filter((item) => !dynamicItems.includes(item));
+        dynamicItems = [...dynamicItems, ...fallbacks].slice(0, 4);
+      }
 
       const totalQty = matching.reduce(
         (sum, c) => sum + (c.totalQuantity ?? c.stockQty ?? 1),
@@ -386,7 +405,7 @@ export default function Landing() {
         </div>
 
         <div className="ticker-single-announcement">
-          <span>12 Lab Stations Open Now across DEIE &middot; Real-time workbench reservation &amp; equipment counter operational</span>
+          <span>12 Lab Stations Open Now across DEIE &middot; Real-time worktable reservation &amp; equipment counter operational</span>
         </div>
       </div>
 
@@ -550,7 +569,7 @@ export default function Landing() {
               <div className="lab-stacked-rows">
                 {lab.items.map((item, idx) => (
                   <div key={idx} className="lab-row-item">
-                    {item}
+                    <span className="lab-row-item-text">{item}</span>
                   </div>
                 ))}
               </div>
@@ -598,40 +617,40 @@ export default function Landing() {
               </button>
             </div>
 
-            <div className="modal-body" style={{ padding: '28px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '22px' }}>
-                <div style={{ padding: '14px', backgroundColor: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>Officer-in-Charge</div>
-                  <div style={{ fontSize: '14.5px', fontWeight: '600', color: 'var(--text-primary)', marginTop: '4px' }}>
+            <div className="modal-body" style={{ padding: '16px 22px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div style={{ padding: '10px 14px', backgroundColor: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Officer-in-Charge</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginTop: '2px' }}>
                     {selectedLabModal.inCharge}
                   </div>
                 </div>
 
-                <div style={{ padding: '14px', backgroundColor: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>Real-Time Availability</div>
-                  <div style={{ fontSize: '14.5px', fontWeight: '600', color: 'var(--color-emerald-text)', marginTop: '4px' }}>
-                    {selectedLabModal.openStations} of {selectedLabModal.totalStations} Workbenches Available
+                <div style={{ padding: '10px 14px', backgroundColor: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Real-Time Availability</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-emerald-text)', marginTop: '2px' }}>
+                    {selectedLabModal.openStations} of {selectedLabModal.totalStations} Worktables Available
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '22px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <h4 style={{ fontSize: '15px', fontWeight: '600' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '14.5px', fontWeight: '600' }}>
                     Live Inventory &amp; Equipment Catalog
                   </h4>
-                  <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {selectedLabModal.dbComponents ? `${selectedLabModal.dbComponents.length} Items (Worktables 1-12)` : 'Assigned Gear'}
                   </span>
                 </div>
 
                 {selectedLabModal.dbComponents && selectedLabModal.dbComponents.length > 0 ? (
-                  <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
                     {selectedLabModal.dbComponents.map((comp) => (
                       <div
                         key={comp._id || comp.compId}
                         style={{
-                          padding: '12px 14px',
+                          padding: '8px 12px',
                           borderRadius: 'var(--radius-sm)',
                           backgroundColor: 'var(--bg-surface-subtle)',
                           border: '1px solid var(--border-subtle)',
@@ -642,12 +661,12 @@ export default function Landing() {
                         }}
                       >
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: '600', fontSize: '13.5px', color: 'var(--text-primary)' }}>
                               {comp.name}
                             </span>
                             <span style={{
-                              fontSize: '11px',
+                              fontSize: '10.5px',
                               fontWeight: '600',
                               padding: '2px 7px',
                               borderRadius: 'var(--radius-pill)',
@@ -657,25 +676,25 @@ export default function Landing() {
                               {comp.usageType || 'Lab-Reference Only'}
                             </span>
                           </div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {comp.spec && <span>{comp.spec} &middot;</span>}
                             <span style={{ color: 'var(--primary-navy)', fontWeight: '500' }}>{comp.location || 'Worktable 1'}</span>
                           </div>
                         </div>
 
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: '12.5px', fontWeight: '600', color: 'var(--text-primary)' }}>
                             {comp.availableQuantity ?? comp.stockQty ?? 0} In Stock
                           </div>
                           <button
                             onClick={() => navigate('/login')}
                             style={{
-                              marginTop: '4px',
-                              padding: '4px 12px',
+                              marginTop: '3px',
+                              padding: '3px 10px',
                               borderRadius: 'var(--radius-pill)',
                               background: 'var(--primary-navy)',
                               color: '#fff',
-                              fontSize: '12px',
+                              fontSize: '11.5px',
                               fontWeight: '600',
                               border: 'none',
                               cursor: 'pointer'
@@ -688,16 +707,16 @@ export default function Landing() {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {(selectedLabModal.items || selectedLabModal.equipment || []).map((eq, i) => (
                       <span
                         key={i}
                         style={{
-                          padding: '6px 14px',
+                          padding: '5px 12px',
                           backgroundColor: 'var(--bg-surface-subtle)',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: 'var(--radius-pill)',
-                          fontSize: '13.5px',
+                          fontSize: '12.5px',
                           fontWeight: '500'
                         }}
                       >
@@ -710,7 +729,7 @@ export default function Landing() {
 
 
               <div style={{
-                padding: '14px 18px',
+                padding: '10px 16px',
                 backgroundColor: 'var(--primary-navy-soft)',
                 borderRadius: 'var(--radius-md)',
                 display: 'flex',
@@ -719,11 +738,8 @@ export default function Landing() {
                 gap: '12px'
               }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--primary-navy)' }}>
-                    Reserve Workbench or Request Gear
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                    Requires university student/staff SSO authentication
+                  <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--primary-navy)' }}>
+                    Reserve Worktable or Request Equipment
                   </div>
                 </div>
                 <button
@@ -744,17 +760,19 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Goals Modal */}
+      {/* Goals & Modernization Fundraiser Modal */}
       {showGoalsModal && (
         <div className="modal-overlay" onClick={() => setShowGoalsModal(false)}>
-          <div className="modal-card-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-accent" style={{ backgroundColor: '#0f224a' }}>
+          <div className="modal-card-fundraiser" onClick={(e) => e.stopPropagation()}>
+            <div className="fundraiser-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Target size={26} color="#ffffff" />
+                <Target size={24} color="#38bdf8" />
                 <div>
-                  <h3 className="modal-title">DEIE Department Goals &amp; Modernization</h3>
-                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '2px' }}>
-                    Strategic Vision &middot; Infrastructure Modernization &middot; Academic Excellence
+                  <h3 className="fundraiser-header-title">
+                    Department Goals &middot; Fundraisers
+                  </h3>
+                  <div className="fundraiser-header-sub">
+                    Undergraduate Project Laboratory
                   </div>
                 </div>
               </div>
@@ -763,62 +781,124 @@ export default function Landing() {
               </button>
             </div>
 
-            <div className="modal-body" style={{ padding: '28px' }}>
-              <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-                The Department of Electrical &amp; Information Engineering is dedicated to advancing world-class
-                laboratory facilities for undergraduate innovation, advanced postgraduate research, and seamless
-                engineering operations.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
-                <div style={{ padding: '16px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: '#f8fafc' }}>
-                  <div style={{ fontWeight: '700', fontSize: '15.5px', color: 'var(--primary-navy)' }}>
-                    Goal 1: 100% Digital Lab Allocation &amp; Smart Inventory
-                  </div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.5 }}>
-                    Centralized digital workbench bookings, real-time equipment tracking, and automated verification across all 8 specialized departmental facilities.
-                  </div>
-                </div>
-
-                <div style={{ padding: '16px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: '#f8fafc' }}>
-                  <div style={{ fontWeight: '700', fontSize: '15.5px', color: 'var(--primary-navy)' }}>
-                    Goal 2: High-Precision Instrumentation Upgrades
-                  </div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.5 }}>
-                    Equipping workstations with 4-channel digital storage oscilloscopes, RF spectrum analyzers, and multi-output precision DC power supplies.
-                  </div>
-                </div>
-
-                <div style={{ padding: '16px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: '#f8fafc' }}>
-                  <div style={{ fontWeight: '700', fontSize: '15.5px', color: 'var(--primary-navy)' }}>
-                    Goal 3: Green Energy &amp; High Voltage Research Standards
-                  </div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.5 }}>
-                    Expanding solar microgrid testbenches, grid-tie power converters, and modernized high-voltage impulse testing apparatus.
-                  </div>
-                </div>
-
-                <div style={{ padding: '16px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: '#f8fafc' }}>
-                  <div style={{ fontWeight: '700', fontSize: '15.5px', color: 'var(--primary-navy)' }}>
-                    Goal 4: Industry Collaboration &amp; Capstone Grants
-                  </div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.5 }}>
-                    Partnering with engineering industry leaders and alumni networks to sponsor hardware testbeds and undergraduate project grants.
-                  </div>
+            <div className="fundraiser-modal-body">
+              {/* LEFT COLUMN: Authentic single product photo provided by user */}
+              <div className="fundraiser-photo-col">
+                <div className="product-image-container">
+                  <img
+                    src={bambuA1UserImg}
+                    alt="Bambu Lab A1 3D Printer with AMS Lite"
+                    className="product-single-photo"
+                  />
                 </div>
               </div>
 
-              <div style={{ fontSize: '13.5px', color: 'var(--text-muted)' }}>
-                For departmental partnerships or inquiries, contact: <strong style={{ color: 'var(--text-primary)' }}>deie@eng.ruh.ac.lk</strong>
+              {/* RIGHT COLUMN: Details, Progress Bar & Bank Details */}
+              <div className="fundraiser-info-col">
+                <div className="product-title-wrap">
+                  <h2 className="product-detail-name">
+                    Bambu Lab A1 3D Printer (Global Version)
+                  </h2>
+                  <div className="product-price-row">
+                    <span className="product-price-label">Estimated Cost:</span>
+                    <span className="product-price-primary">LKR 225,205.20</span>
+                  </div>
+                </div>
+
+                {/* Progress Bar Card */}
+                <div className="fundraiser-campaign-card">
+                  <div className="campaign-stat-header">
+                    <div>
+                      <span className="stat-label">Campaign Progress</span>
+                      <div className="stat-amounts">
+                        <strong>LKR 148,500.00</strong>
+                        <span className="stat-target"> / LKR 198,000.00 Target</span>
+                      </div>
+                    </div>
+                    <div className="campaign-percent-badge">
+                      75% Funded
+                    </div>
+                  </div>
+
+                  <div className="campaign-progress-bar-bg">
+                    <div className="campaign-progress-bar-fill" style={{ width: '75%' }}></div>
+                  </div>
+
+                  <div className="campaign-meta-row">
+                    <span className="campaign-meta-item">
+                      <Users size={14} />
+                      <span>38 Backers Contributed</span>
+                    </span>
+                    <span className="campaign-meta-item">
+                      <Clock size={14} />
+                      <span>LKR 49,500.00 Remaining</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Direct Bank Account Details Card */}
+                <div className="bank-account-card">
+                  <div className="bank-account-card-header">
+                    <Building size={16} color="#0284c7" />
+                    <span>Contribute via Bank Transfer</span>
+                  </div>
+
+                  <div className="bank-account-fields">
+                    <div className="bank-field-row">
+                      <span className="bank-field-label">Bank:</span>
+                      <span className="bank-field-value">People's Bank</span>
+                    </div>
+                    <div className="bank-field-row">
+                      <span className="bank-field-label">Branch:</span>
+                      <span className="bank-field-value">Hapugala Campus Branch (086)</span>
+                    </div>
+                    <div className="bank-field-row">
+                      <span className="bank-field-label">Account Name:</span>
+                      <span className="bank-field-value">Faculty of Engineering - DEIE Development Fund</span>
+                    </div>
+
+                    <div className="bank-account-num-box">
+                      <div>
+                        <span className="bank-acc-label">Account Number</span>
+                        <span className="bank-acc-digits">086-1001-2004-5678</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-copy-acc"
+                        onClick={handleCopyAccountNo}
+                      >
+                        {copiedBankNo ? (
+                          <>
+                            <Check size={14} color="#059669" />
+                            <span style={{ color: '#059669', fontWeight: '600' }}>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="bank-field-row">
+                      <span className="bank-field-label">Reference:</span>
+                      <span className="bank-field-value" style={{ color: '#0284c7', fontWeight: '600' }}>
+                        Student Reg No - Bambu A1
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="modal-footer">
+            {/* Modal Footer */}
+            <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                Department of Electrical &amp; Information Engineering &middot; University of Ruhuna
+              </div>
               <button className="btn-secondary" onClick={() => setShowGoalsModal(false)}>
                 Close
-              </button>
-              <button className="btn-submit" onClick={() => alert('Thank you for your interest in DEIE Department Goals! Contact deie@eng.ruh.ac.lk for details.')}>
-                Contact Department Office
               </button>
             </div>
           </div>
@@ -833,7 +913,7 @@ export default function Landing() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <HelpCircle size={26} color="#ffffff" />
                 <div>
-                  <h3 className="modal-title">Help &amp; Laboratory Operations Directory</h3>
+                  <h3 className="modal-title">Help &amp; Laboratory Operations</h3>
                   <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '2px' }}>
                     Safety Guidelines &middot; Technical Support &middot; Equipment Policies
                   </div>
@@ -844,26 +924,26 @@ export default function Landing() {
               </button>
             </div>
 
-            <div className="modal-body" style={{ padding: '28px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ padding: '14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontWeight: '600', fontSize: '15px' }}>Equipment Check-out &amp; Return Hours</div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Monday &ndash; Friday: 08:30 AM &ndash; 04:45 PM (Counter B, Block D Ground Floor)
+            <div className="modal-body" style={{ padding: '16px 22px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ padding: '10px 14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontWeight: '600', fontSize: '14px' }}>Equipment Checkout &amp; Return Hours</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Monday &ndash; Friday: 08:30 AM &ndash; 04:00 PM (Technical Office, Ground Floor)
                   </div>
                 </div>
 
-                <div style={{ padding: '14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontWeight: '600', fontSize: '15px' }}>High-Voltage &amp; Power Safety Clearance</div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Access to HVRE and EMPS labs requires safety briefing and active presence of Technical Officer.
+                <div style={{ padding: '10px 14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontWeight: '600', fontSize: '14px' }}>High-Voltage &amp; Power Safety Clearance</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Access to High Voltage and Renewable Energy labs requires safety gear and active presence of Technical Officer.
                   </div>
                 </div>
 
-                <div style={{ padding: '14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontWeight: '600', fontSize: '15px' }}>University SSO Login Issues</div>
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    If you cannot access your account, email <strong>helpdesk@eng.ruh.ac.lk</strong> or visit IT Services Block F.
+                <div style={{ padding: '10px 14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontWeight: '600', fontSize: '14px' }}>Portal Login Issues</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    If you cannot access your account, email <strong>adminhelp@eng.ruh.ac.lk</strong> or contact the respective student advisor.
                   </div>
                 </div>
               </div>

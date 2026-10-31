@@ -385,6 +385,22 @@
   margin-bottom: 8px;
 }
 
+.admin-portal-header .sessions-title,
+.sessions-title {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 6px 0 6px 0;
+}
+
+.admin-portal-header .sessions-subtitle,
+.sessions-subtitle {
+  color: #e2e8f0;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
 .btn-allocate-new {
   display: flex;
   align-items: center;
@@ -547,16 +563,68 @@
 }
 
 /* =========================================================================
-   ALLOCATION MODAL FORM
+   ALLOCATION & VERIFICATION MODAL OVERLAYS
    ========================================================================= */
 
-.allocate-modal-card {
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.allocate-modal-card,
+.verify-modal-card {
   background-color: #ffffff;
   border-radius: 12px;
   width: 100%;
   max-width: 560px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   padding: 24px;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f1f5f9;
+  color: #0f224a;
+  flex-shrink: 0;
 }
 
 .modal-top-header {
@@ -692,3 +760,388 @@
 .btn-modal-confirm:hover {
   background-color: #1e3a8a;
 }
+
+/* Verify Return & Restock Modal Body */
+.verify-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+
+.verify-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.verify-modal-header p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.inspection-instructions {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.checklist-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #f8fafc;
+  margin-bottom: 16px;
+}
+
+.checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  gap: 12px;
+}
+
+.checklist-row.damaged-highlight {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+}
+
+.check-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.check-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.check-item-qty {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.btn-flag-damaged {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-flag-damaged.flagged {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+.remarks-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.remarks-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.remarks-field textarea {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.remarks-field textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.verify-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+}
+
+/* =========================================================================
+   STUDENT GROUP ALLOCATION & WORKTABLE TEAM STYLES
+   ========================================================================= */
+
+.btn-allocate-outline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-allocate-outline:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+}
+
+/* Modal Group Mode Segmented Tabs */
+.modal-alloc-type-tabs {
+  display: flex;
+  background-color: #f1f5f9;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.alloc-type-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.alloc-type-tab.active {
+  background-color: #ffffff;
+  color: #0f224a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+}
+
+.alloc-info-box {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+/* Group Distribution Preview Cards in Modal */
+.group-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  background-color: #f8fafc;
+}
+
+.group-preview-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.group-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.group-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f224a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-card-table-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background-color: #eff6ff;
+  color: #2563eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.group-card-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.group-member-tag {
+  font-size: 11px;
+  background-color: #f1f5f9;
+  color: #334155;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Admin Table Group Badges */
+.table-group-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #eff6ff;
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #bfdbfe;
+}
+
+.table-group-members-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  max-width: 280px;
+}
+
+.member-chip {
+  font-size: 11px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.btn-table-action.btn-delete {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-table-action.btn-delete:hover {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+}
+
+/* Student Portal Team Tray */
+.student-team-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.student-team-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.student-team-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.team-members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.team-member-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+}
+
+.team-member-card.is-current-user {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.team-member-reg {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+}
+
+.team-member-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.team-you-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+

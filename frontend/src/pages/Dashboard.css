@@ -28,32 +28,44 @@
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 4px 6px 24px 6px;
+  gap: 12px;
+  padding: 4px 6px 20px 6px;
   border-bottom: 1px solid var(--border-divider);
   margin-bottom: 22px;
 }
 
-.sidebar-logo-icon {
+.sidebar-brand-logo {
   width: 42px;
   height: 42px;
-  background: linear-gradient(135deg, #0f224a 0%, #1e3a8a 100%);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
+  object-fit: contain;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 6px rgba(15, 34, 74, 0.08);
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(15, 34, 74, 0.15);
 }
 
-.sidebar-logo-title {
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-brand-name {
   font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--text-primary);
-  letter-spacing: -0.2px;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--primary-navy, #0f224a);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.25;
+  margin-top: 2px;
 }
 
 .sidebar-nav {

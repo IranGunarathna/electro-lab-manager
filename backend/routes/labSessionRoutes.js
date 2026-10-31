@@ -5,7 +5,11 @@ const {
   getAllLabSessions,
   getStudentLabSessions,
   getStudentsList,
+  getStudentGroups,
   allocateStudentLabSession,
+  allocateGroupLabSession,
+  batchAllocateGroups,
+  deleteLabSession,
   getLabSessionById,
   checkInLabSession,
   completeLabSession,
@@ -18,8 +22,20 @@ router.get('/', getAllLabSessions);
 // Get list of all students for Admin allocation
 router.get('/students', getStudentsList);
 
-// Admin allocates a lab session to a student
+// Get student groups auto-distributed into 4 per group
+router.get('/groups', getStudentGroups);
+
+// Admin allocates an individual student to a worktable
 router.post('/allocate', allocateStudentLabSession);
+
+// Admin allocates an entire group to a worktable
+router.post('/allocate-group', allocateGroupLabSession);
+
+// Admin batch-allocates all groups in semester across worktables in one click
+router.post('/allocate-batch-groups', batchAllocateGroups);
+
+// Delete an allocated session
+router.delete('/:id', deleteLabSession);
 
 // Get student's assigned lab sessions
 router.get('/student/:email', getStudentLabSessions);
@@ -37,3 +53,4 @@ router.put('/:id/complete', completeLabSession);
 router.put('/:id/verify-return', verifyAndRestockLabSession);
 
 module.exports = router;
+
