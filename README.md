@@ -122,8 +122,8 @@ After running the database seeders, you can log in using any of the following ac
 |---|---|---|---|
 | Admin | `admin@eng.ruh.ac.lk` (or `ADM001`) | `password123` | Full administrative control, user management, inventory settings |
 | Lab Assistant | `officer@eng.ruh.ac.lk` (or `LAB001`) | `password123` | Equipment approval, component check-in/out, damage logging |
-| Student (Semester 3) | `aberathna.s@eng.ruh.ac.lk` (or `EG/2023/5456`) | `password123` | Browse catalog, request loans, view practical kits |
-| Student (Semester 4) | `arafath.a@eng.ruh.ac.lk` (or `EG/2023/5485`) | `password123` | Browse catalog, request loans, view practical kits |
+| Student (Semester 3) | `eg20235456@eng.ruh.ac.lk` (or `EG/2023/5456`) | `password123` | Browse catalog, request loans, view practical kits |
+| Student (Semester 4) | `eg20235485@eng.ruh.ac.lk` (or `EG/2023/5485`) | `password123` | Browse catalog, request loans, view practical kits |
 
 ## Project Files
 
