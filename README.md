@@ -154,7 +154,7 @@ After running the database seeders, you can log in using any of the following ac
 
 ## Features
 
-- Real-time station tracker across 8 specialized DEIE laboratories
+- Lab station tracker across 8 specialized DEIE laboratories
 - Searchable electronic component and equipment catalog
 - Role-based access control for Admins, Lab Assistants, and Students
 - Component loan request, approval, and return tracking
