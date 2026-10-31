@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 // Helper to generate JWT
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'super_secret_electro_lab_key_123', {
     expiresIn: '7d'
   });
 };

@@ -7,7 +7,8 @@ dotenv.config();
 
 const seedUsers = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    const mongoUri = process.env.MONGO_URI || 'mongodb+srv://jayanethgunarathna_db_user:ij8RLyqfHxl9GnFh@eleclabcomp.mg3xaxy.mongodb.net/?appName=ElecLAbComp';
+    await mongoose.connect(mongoUri);
     console.log('MongoDB Connected for seeding...');
 
     // Clear existing users to wipe corrupted hashes

@@ -9,7 +9,7 @@ LabSync is a web application designed for the Department of Electrical and Infor
 - Node.js (v18.x or higher)
 - npm (bundled with Node.js)
 - Git
-- MongoDB (MongoDB Atlas cloud database URI or a local MongoDB instance running on `mongodb://localhost:27017/electro-lab`)
+- MongoDB: **Not required** (a pre-configured cloud test database is already included in `.env.example`, so no account or local installation is needed)
 
 ## Setup Instructions
 
@@ -31,7 +31,7 @@ cd backend
 npm install
 ```
 
-Create an environment configuration file:
+Create your `.env` file by copying `.env.example`. The template already contains a pre-configured shared cloud test database, so no edits are needed:
 
 **On Windows (PowerShell):**
 ```powershell
@@ -43,13 +43,7 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Open `.env` in a text editor and configure your environment variables:
-
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
-```
+*(Optional: If you prefer to use your own personal database instead of the shared test database, you can open `.env` and replace `MONGO_URI` with your own connection string).*
 
 ### 3. Seed Database
 
