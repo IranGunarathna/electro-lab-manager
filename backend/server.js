@@ -1,23 +1,18 @@
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const connectDB = require('./config/db');
-const authRoutes = require('./routes/authRoutes');
 
-// getting  environment variables using the env
+// Load environment variables
 dotenv.config();
 
-// Connecting t mongoDB Atlas
+// Connect to MongoDB Atlas
 connectDB();
 
 const app = express();
 
-// intermediate process handles that run on every HTTP
-
-
-const path = require('path');
-
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,42 +20,31 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static uploaded assets
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-// Routes
-app.use('/api/auth', authRoutes);
-
 // Health Check Route
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'ElectroLab is running' });
 });
 
+// Import Routes
+const authRoutes = require('./routes/authRoutes');
+const componentRoutes = require('./routes/componentRoutes');
+const borrowRoutes = require('./routes/borrowRoutes');
+const equipmentRoutes = require('./routes/equipmentRoutes');
+const itemRoutes = require('./routes/itemRoutes');
+const labSessionRoutes = require('./routes/labSessionRoutes');
+const transactionRoutes = require('./routes/transactionRoutes');
+
+// Mount Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/components', componentRoutes);
+app.use('/api/borrows', borrowRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/lab-sessions', labSessionRoutes);
+app.use('/api/transactions', transactionRoutes);
+
+// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-
-const componentRoutes = require('./routes/componentRoutes');
-
-// Add with the other routes:
-app.use('/api/components', componentRoutes);
-
-
-const transactionRoutes = require('./routes/transactionRoutes');
-
-// Mount alongside other routes:
-app.use('/api/transactions', transactionRoutes);
-
-const equipmentRoutes = require('./routes/equipmentRoutes');
-app.use('/api/equipment', equipmentRoutes);
-
-
-// Add these lines along with your other route imports
-const itemRoutes = require('./routes/itemRoutes');
-app.use('/api/items', itemRoutes);
-
-const labSessionRoutes = require('./routes/labSessionRoutes');
-app.use('/api/lab-sessions', labSessionRoutes);
-
-const borrowRoutes = require('./routes/borrowRoutes');
-app.use('/api/borrows', borrowRoutes);
-
