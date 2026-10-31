@@ -135,6 +135,75 @@ After running the database seeders, you can log in using any of the following ac
 | Student (Semester 3) | `eg20235456@eng.ruh.ac.lk` (or `EG/2023/5456`) | `password123` | Browse catalog, request loans, view practical kits |
 | Student (Semester 4) | `eg20235485@eng.ruh.ac.lk` (or `EG/2023/5485`) | `password123` | Browse catalog, request loans, view practical kits |
 
+## Database Design (Entity Relationship Diagram)
+
+```mermaid
+erDiagram
+    USER {
+        ObjectId _id PK
+        string userId UK
+        string regNo
+        string firstName
+        string lastName
+        string uniEmail UK
+        string role
+        string dept
+        number semester
+    }
+
+    COMPONENT {
+        ObjectId _id PK
+        string compId UK
+        string name
+        string spec
+        string category
+        string lab
+        string location
+        number totalQuantity
+        number availableQuantity
+        string usageType
+        string status
+    }
+
+    BORROW {
+        ObjectId _id PK
+        string borrowId UK
+        ObjectId student FK
+        ObjectId component FK
+        string studentRegNo
+        string componentName
+        string status
+        number durationDays
+        date borrowDate
+        date returnDate
+    }
+
+    LAB_SESSION {
+        ObjectId _id PK
+        string sessionId UK
+        string courseCode
+        string courseName
+        number semester
+        number labNumber
+        string worktable
+        date scheduledDate
+        string status
+    }
+
+    EQUIPMENT_ITEM {
+        string componentId
+        string name
+        string spec
+        number quantityRequired
+        string status
+    }
+
+    USER ||--o{ BORROW : "submits loans"
+    COMPONENT ||--o{ BORROW : "is borrowed in"
+    LAB_SESSION ||--|{ EQUIPMENT_ITEM : "embeds required kits"
+    USER ||--o{ LAB_SESSION : "assigned to"
+```
+
 ## Project Files
 
 ### Backend (`/backend`)

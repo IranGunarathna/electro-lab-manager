@@ -29,7 +29,9 @@ import {
   PackageCheck,
   RefreshCw,
   Info,
-  KeyRound
+  KeyRound,
+  Trash2,
+  Edit
 } from 'lucide-react';
 import LabCalendar from '../components/LabCalendar';
 import LabSessionsManager from '../components/LabSessionsManager';
@@ -141,6 +143,27 @@ export default function Dashboard() {
       fetchBackendData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to reset student password.');
+    }
+  };
+
+  const handleDeleteComponent = async (comp) => {
+    if (!window.confirm(`Are you sure you want to remove "${comp.name || comp.spec}" (${comp.compId}) from inventory? This action is permanent and safe.`)) {
+      return;
+    }
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+      const res = await axios.delete(`http://localhost:5000/api/components/${comp._id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      alert(res.data?.message || 'Component removed successfully.');
+      await fetchBackendData();
+    } catch (err) {
+      console.error('Delete component error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to delete component';
+      alert(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -983,10 +1006,33 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  <button className="btn-primary-loan" onClick={() => setShowNewBorrowModal(true)}>
-                    <Plus size={16} />
-                    <span>New Borrow</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {(user.role === 'Admin' || user.role === 'LabAssistant') && (
+                      <button
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '10px 18px',
+                          borderRadius: 'var(--radius-pill)',
+                          background: '#059669',
+                          color: '#ffffff',
+                          fontWeight: '600',
+                          fontSize: '13.5px',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => setAdminCompModal({ isOpen: true, editComponent: null })}
+                      >
+                        <Plus size={16} />
+                        <span>Add Component</span>
+                      </button>
+                    )}
+                    <button className="btn-primary-loan" onClick={() => setShowNewBorrowModal(true)}>
+                      <Plus size={16} />
+                      <span>New Borrow</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="widget-box" style={{ padding: '0', overflow: 'hidden' }}>
@@ -998,7 +1044,7 @@ export default function Dashboard() {
                           <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>LABORATORY</th>
                           <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>LOCATION</th>
                           <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)' }}>AVAILABILITY</th>
-                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)', textAlign: 'right', minWidth: '120px' }}>ACTION</th>
+                          <th style={{ padding: '16px 20px', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-muted)', textAlign: 'right', minWidth: '160px' }}>ACTION</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1036,23 +1082,72 @@ export default function Dashboard() {
                                 </span>
                               </td>
                               <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                                <button
-                                  onClick={() => setShowNewBorrowModal(true)}
-                                  disabled={stock <= 0}
-                                  style={{
-                                    padding: '8px 16px',
-                                    borderRadius: 'var(--radius-pill)',
-                                    background: stock > 0 ? 'var(--primary-navy)' : '#94a3b8',
-                                    color: '#ffffff',
-                                    fontSize: '13.5px',
-                                    fontWeight: '500',
-                                    border: 'none',
-                                    cursor: stock > 0 ? 'pointer' : 'not-allowed',
-                                    whiteSpace: 'nowrap'
-                                  }}
-                                >
-                                  Borrow
-                                </button>
+                                <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => setShowNewBorrowModal(true)}
+                                    disabled={stock <= 0}
+                                    style={{
+                                      padding: '7px 14px',
+                                      borderRadius: 'var(--radius-pill)',
+                                      background: stock > 0 ? 'var(--primary-navy)' : '#94a3b8',
+                                      color: '#ffffff',
+                                      fontSize: '13px',
+                                      fontWeight: '500',
+                                      border: 'none',
+                                      cursor: stock > 0 ? 'pointer' : 'not-allowed',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    Borrow
+                                  </button>
+
+                                  {(user.role === 'Admin' || user.role === 'LabAssistant') && (
+                                    <>
+                                      <button
+                                        onClick={() => setAdminCompModal({ isOpen: true, editComponent: item })}
+                                        title="Edit Component Details"
+                                        style={{
+                                          padding: '6px 10px',
+                                          borderRadius: '6px',
+                                          background: 'rgba(59, 130, 246, 0.1)',
+                                          color: '#2563eb',
+                                          fontSize: '12px',
+                                          fontWeight: '600',
+                                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        <Edit size={12} />
+                                        <span>Edit</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteComponent(item)}
+                                        title="Safely Delete Component from Inventory"
+                                        style={{
+                                          padding: '6px 10px',
+                                          borderRadius: '6px',
+                                          background: 'rgba(239, 68, 68, 0.1)',
+                                          color: '#dc2626',
+                                          fontSize: '12px',
+                                          fontWeight: '600',
+                                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        <Trash2 size={12} />
+                                        <span>Delete</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1289,6 +1384,13 @@ export default function Dashboard() {
         borrow={approvalModal.borrow}
         mode={approvalModal.mode}
         onClose={() => setApprovalModal({ isOpen: false, borrow: null, mode: 'APPROVE' })}
+        onSuccess={fetchBackendData}
+      />
+
+      <AdminComponentModal
+        isOpen={adminCompModal.isOpen}
+        onClose={() => setAdminCompModal({ isOpen: false, editComponent: null })}
+        editComponent={adminCompModal.editComponent}
         onSuccess={fetchBackendData}
       />
     </div>

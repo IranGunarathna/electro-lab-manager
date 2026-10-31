@@ -7,6 +7,7 @@ const {
   getComponentById,
   createComponent,
   updateComponent,
+  deleteComponent,
   uploadImage,
   upload
 } = require('../controllers/componentController');
@@ -39,6 +40,11 @@ router
     authorizeRoles('LabAssistant', 'Admin'),
     upload.single('image'),
     updateComponent
+  )
+  .delete(
+    protect,
+    authorizeRoles('LabAssistant', 'Admin'),
+    deleteComponent
   );
 
 module.exports = router;

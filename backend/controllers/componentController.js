@@ -206,3 +206,40 @@ exports.updateComponent = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Delete component safely (Admin / LabAssistant only)
+// @route   DELETE /api/components/:id
+// @access  Private (LabAssistant, Admin)
+exports.deleteComponent = async (req, res) => {
+  try {
+    const component = await Component.findById(req.params.id);
+    if (!component) {
+      return res.status(404).json({ message: 'Component not found' });
+    }
+
+    // Safety check: ensure component is not tied to active/ongoing loans
+    const Borrow = require('../models/Borrow');
+    const activeBorrow = await Borrow.findOne({
+      $or: [
+        { component: component._id },
+        { componentName: component.name }
+      ],
+      status: { $in: ['Requested', 'Approved', 'Borrowed', 'Issued'] }
+    });
+
+    if (activeBorrow) {
+      return res.status(400).json({
+        message: `Cannot safely delete "${component.name}". It is currently linked to an active loan record (ID: ${activeBorrow.borrowId}). Please return or resolve the loan first.`
+      });
+    }
+
+    await Component.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      message: `Component "${component.name}" (${component.compId}) was safely removed from inventory.`
+    });
+  } catch (error) {
+    console.error('Error deleting component:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
